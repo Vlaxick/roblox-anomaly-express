@@ -10,14 +10,12 @@ local GameConfig = {
 	ExpeditionDurationSeconds = 300,
 	FieldXpLossOnFailure = 0.5,
 	PlotCount = 6,
-	EyeFlowerProductionSeconds = 5,
-	EyeFlowerEnergyPerCycle = 5,
-	EyeFlowerStorageLimit = 100,
-	EyeFlowerCollectionXP = 5,
-	ProductionUpgradeCost = 80,
-	StorageUpgradeCost = 150,
-	ProductionUpgradeMultiplier = 2,
-	StorageUpgradeMultiplier = 2,
+	StartingCoins = 40,
+	StartingBeds = 2,
+	MaxBeds = 8,
+	IncomeInterval = 5,
+	GrowXP = 10,
+	BedPrices = table.freeze({ 0, 0, 50, 100, 180, 300, 480, 750 }),
 }
 
 return table.freeze(GameConfig)

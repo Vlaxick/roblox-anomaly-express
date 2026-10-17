@@ -2,234 +2,400 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
-
+local ContextActionService = game:GetService("ContextActionService")
 local player = Players.LocalPlayer
-local Config = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Theme = require(ReplicatedStorage.Shared.Config.Theme)
+local Config = require(ReplicatedStorage.Shared.Config.GameConfig)
+local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local Assets = require(ReplicatedStorage.Shared.FarmAssets)
+local remotes = ReplicatedStorage:WaitForChild("FarmRemotes")
+local request = remotes:WaitForChild("Request") :: RemoteFunction
+local openMenu = remotes:WaitForChild("OpenPlantMenu") :: RemoteEvent
+local feedback = remotes:WaitForChild("Feedback") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "AnomalyHUD"
-gui.DisplayOrder = 10
 gui.ResetOnSpawn = false
-gui.IgnoreGuiInset = false
+gui.DisplayOrder = 10
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = player:WaitForChild("PlayerGui")
+local screen = Instance.new("Frame")
+screen.Name = "SafeArea"
+screen.Size = UDim2.fromScale(1, 1)
+screen.BackgroundTransparency = 1
+screen.Parent = gui
 
-local function frame(parent: Instance, name: string, size: UDim2, position: UDim2, color: Color3): Frame
+local function rounded(object: GuiObject, radius: number)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, radius)
+	corner.Parent = object
+end
+
+local function frame(parent: Instance, name: string, color: Color3, radius: number?): Frame
 	local f = Instance.new("Frame")
 	f.Name = name
-	f.Size = size
-	f.Position = position
 	f.BackgroundColor3 = color
-	f.BackgroundTransparency = 0.04
 	f.BorderSizePixel = 0
 	f.Parent = parent
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
-	corner.Parent = f
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Theme.Slate
-	stroke.Thickness = 1
-	stroke.Transparency = 0.15
-	stroke.Parent = f
+	if radius then rounded(f, radius) end
 	return f
 end
 
-local function text(parent: Instance, name: string, content: string, pos: UDim2, size: UDim2, pointSize: number, color: Color3, font: Enum.Font): TextLabel
+local function text(parent: Instance, name: string, value: string, size: number, color: Color3, font: Enum.Font?): TextLabel
 	local t = Instance.new("TextLabel")
 	t.Name = name
 	t.BackgroundTransparency = 1
-	t.Position = pos
-	t.Size = size
-	t.Font = font
-	t.Text = content
-	t.TextSize = pointSize
+	t.Text = value
+	t.TextSize = size
 	t.TextColor3 = color
+	t.Font = font or Enum.Font.GothamMedium
 	t.TextXAlignment = Enum.TextXAlignment.Left
-	t.TextYAlignment = Enum.TextYAlignment.Center
 	t.Parent = parent
 	return t
 end
 
-local function progress(parent: Instance, name: string, position: UDim2, width: number, color: Color3): Frame
-	local track = frame(parent, name .. "Track", UDim2.fromOffset(width, 7), position, Theme.Steel)
-	track.BackgroundTransparency = 0
-	track:FindFirstChildOfClass("UIStroke"):Destroy()
-	local fill = frame(track, name .. "Fill", UDim2.fromScale(0, 1), UDim2.fromScale(0, 0), color)
-	fill.BackgroundTransparency = 0
-	fill:FindFirstChildOfClass("UIStroke"):Destroy()
-	return fill
+local function button(parent: Instance, name: string, value: string): TextButton
+	local b = Instance.new("TextButton")
+	b.Name = name
+	b.BackgroundColor3 = Theme.Green
+	b.BorderSizePixel = 0
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 16
+	b.TextColor3 = Theme.Paper
+	b.Text = value
+	b.AutoButtonColor = true
+	b.Parent = parent
+	rounded(b, 9)
+	local stroke = Instance.new("UIStroke")
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	stroke.Color = Theme.Ink
+	stroke.Transparency = 0.65
+	stroke.Parent = b
+	return b
 end
 
-local status = frame(gui, "BaseStatus", UDim2.fromOffset(286, 190), UDim2.fromOffset(14, 14), Theme.Ink)
-local statusScale = Instance.new("UIScale")
-statusScale.Parent = status
-frame(status, "Accent", UDim2.fromOffset(4, 172), UDim2.fromOffset(0, 9), Theme.Mint)
-local sectorText = text(status, "Sector", "ТВОЯ БАЗА / СЕКТОР --", UDim2.fromOffset(18, 9), UDim2.fromOffset(250, 22), 12, Theme.Mint, Enum.Font.Code)
-text(status, "Title", "ANOMALY EXPRESS", UDim2.fromOffset(18, 33), UDim2.fromOffset(250, 30), 20, Theme.Paper, Enum.Font.GothamBlack)
-local levelText = text(status, "Level", "РІВЕНЬ 01", UDim2.fromOffset(18, 75), UDim2.fromOffset(132, 26), 17, Theme.Paper, Enum.Font.GothamBold)
-local xpText = text(status, "XP", "0 / 100 XP", UDim2.fromOffset(155, 77), UDim2.fromOffset(112, 22), 12, Theme.Muted, Enum.Font.Code)
-xpText.TextXAlignment = Enum.TextXAlignment.Right
-local xpFill = progress(status, "XP", UDim2.fromOffset(18, 108), 250, Theme.Mint)
-text(status, "WalletLabel", "У ТЕБЕ", UDim2.fromOffset(18, 128), UDim2.fromOffset(115, 20), 12, Theme.Muted, Enum.Font.Code)
-text(status, "StoredLabel", "У КОЛЕКТОРІ", UDim2.fromOffset(148, 128), UDim2.fromOffset(120, 20), 12, Theme.Muted, Enum.Font.Code)
-local energyText = text(status, "Wallet", "0", UDim2.fromOffset(18, 148), UDim2.fromOffset(118, 32), 25, Theme.Amber, Enum.Font.GothamBlack)
-local storedText = text(status, "Stored", "0 / 100", UDim2.fromOffset(148, 148), UDim2.fromOffset(120, 32), 21, Theme.Paper, Enum.Font.GothamBold)
+local status = frame(screen, "FarmStatus", Theme.Paper, 12)
+status.Position = UDim2.fromOffset(14, 12)
+status.Size = UDim2.fromOffset(254, 126)
+local edge = Instance.new("UIStroke")
+edge.Color = Theme.Wood
+edge.Thickness = 2
+edge.Parent = status
+local heading = text(status, "Title", "Моя ферма", 21, Theme.Ink, Enum.Font.FredokaOne)
+heading.Position = UDim2.fromOffset(16, 8)
+heading.Size = UDim2.fromOffset(220, 28)
+local coinLabel = text(status, "CoinLabel", "Монети", 12, Theme.Muted)
+coinLabel.Position = UDim2.fromOffset(16, 42)
+coinLabel.Size = UDim2.fromOffset(95, 18)
+local coinsText = text(status, "Coins", "40", 29, Theme.Ink, Enum.Font.GothamBold)
+coinsText.Position = UDim2.fromOffset(16, 61)
+coinsText.Size = UDim2.fromOffset(110, 34)
+local incomeText = text(status, "Income", "+0 / 5 с", 18, Theme.Green, Enum.Font.GothamBold)
+incomeText.Position = UDim2.fromOffset(132, 59)
+incomeText.Size = UDim2.fromOffset(112, 29)
+local autoText = text(status, "AutoIncome", "автоматично", 11, Theme.Muted)
+autoText.Position = UDim2.fromOffset(132, 83)
+autoText.Size = UDim2.fromOffset(110, 16)
+local farmText = text(status, "Beds", "2 грядки · Рівень 1", 12, Theme.Muted)
+farmText.Position = UDim2.fromOffset(16, 103)
+farmText.Size = UDim2.fromOffset(230, 18)
 
-local objective = frame(gui, "CurrentGoal", UDim2.fromOffset(338, 198), UDim2.new(1, -352, 0, 264), Theme.Ink)
-local objectiveScale = Instance.new("UIScale")
-objectiveScale.Parent = objective
-frame(objective, "Accent", UDim2.fromOffset(4, 180), UDim2.fromOffset(0, 9), Theme.Amber)
-text(objective, "Overline", "ЗАРАЗ ЗРОБИ", UDim2.fromOffset(18, 10), UDim2.fromOffset(220, 20), 13, Theme.Amber, Enum.Font.Code)
-local stepText = text(objective, "Step", "КРОК 1 / 3", UDim2.fromOffset(230, 10), UDim2.fromOffset(90, 20), 12, Theme.Muted, Enum.Font.Code)
-stepText.TextXAlignment = Enum.TextXAlignment.Right
-local goalTitle = text(objective, "GoalTitle", "ЗАБЕРИ ПЕРШИЙ ЗАРЯД", UDim2.fromOffset(18, 40), UDim2.fromOffset(302, 28), 19, Theme.Paper, Enum.Font.GothamBlack)
-local goalBody = text(objective, "GoalBody", "Окоцвіт сам наповнює колектор. Підійди до нього й забери енергію.", UDim2.fromOffset(18, 75), UDim2.fromOffset(302, 52), 15, Theme.Paper, Enum.Font.GothamMedium)
-goalBody.TextWrapped = true
-goalBody.TextYAlignment = Enum.TextYAlignment.Top
-local goalFill = progress(objective, "Goal", UDim2.fromOffset(18, 138), 302, Theme.Amber)
-local progressText = text(objective, "Progress", "0 / 5 У КОЛЕКТОРІ", UDim2.fromOffset(18, 151), UDim2.fromOffset(302, 19), 12, Theme.Muted, Enum.Font.Code)
-local targetText = text(objective, "Target", "ЦІЛЬ: КОЛЕКТОР ПО ЦЕНТРУ БАЗИ", UDim2.fromOffset(18, 176), UDim2.fromOffset(302, 18), 12, Theme.Mint, Enum.Font.GothamBold)
+local plantButton = button(screen, "PlantButton", "Посадити")
+plantButton.AnchorPoint = Vector2.new(0.5, 1)
+plantButton.Position = UDim2.new(0.5, 0, 1, -14)
+plantButton.Size = UDim2.fromOffset(202, 48)
+plantButton.TextSize = 18
+local hint = frame(screen, "FarmHint", Theme.Paper, 9)
+hint.AnchorPoint = Vector2.new(0.5, 1)
+hint.Position = UDim2.new(0.5, 0, 1, -72)
+local hintText = text(hint, "Text", "Посади гарбуз — він почне заробляти.", 14, Theme.Ink)
+hintText.Size = UDim2.new(1, -20, 1, 0)
+hintText.Position = UDim2.fromOffset(10, 0)
+hintText.TextXAlignment = Enum.TextXAlignment.Center
+hintText.TextWrapped = true
 
-local notice = frame(gui, "Notice", UDim2.fromOffset(328, 48), UDim2.new(0.5, -164, 1, -65), Theme.Panel)
-local noticeScale = Instance.new("UIScale")
-noticeScale.Parent = notice
-local noticeText = text(notice, "Text", "", UDim2.fromOffset(14, 5), UDim2.fromOffset(300, 38), 14, Theme.Paper, Enum.Font.GothamMedium)
-noticeText.TextWrapped = true
-noticeText.TextXAlignment = Enum.TextXAlignment.Center
-notice.Visible = false
+local overlay = frame(screen, "CatalogueOverlay", Theme.Ink)
+overlay.Size = UDim2.fromScale(1, 1)
+overlay.BackgroundTransparency = 1
+overlay.ZIndex = 20
+overlay.Visible = false
+local backdrop = Instance.new("TextButton")
+backdrop.Name = "CloseBackdrop"
+backdrop.Size = UDim2.fromScale(1, 1)
+backdrop.BackgroundColor3 = Theme.Ink
+backdrop.BackgroundTransparency = 0.3
+backdrop.Text = ""
+backdrop.AutoButtonColor = false
+backdrop.BorderSizePixel = 0
+backdrop.Modal = true
+backdrop.Selectable = false
+backdrop.Parent = overlay
+local catalogue = frame(overlay, "SeedCatalogue", Theme.Paper, 14)
+catalogue.AnchorPoint = Vector2.new(0.5, 0.5)
+catalogue.Position = UDim2.fromScale(0.5, 0.5)
+catalogue.Active = true
+local catalogueBorder = Instance.new("UIStroke")
+catalogueBorder.Color = Theme.Wood
+catalogueBorder.Thickness = 3
+catalogueBorder.Parent = catalogue
+local title = text(catalogue, "Title", "Що посадимо?", 27, Theme.Ink, Enum.Font.FredokaOne)
+local subtitle = text(catalogue, "Subtitle", "Грядка 1 · У тебе 40 монет", 14, Theme.Muted)
+subtitle.TextWrapped = true
+local closeButton = button(catalogue, "CloseCatalogue", "×")
+closeButton.BackgroundColor3 = Theme.Panel
+closeButton.TextColor3 = Theme.Ink
+closeButton.TextSize = 26
+closeButton.Size = UDim2.fromOffset(44, 44)
 
-local highlight = Instance.new("Highlight")
-highlight.Name = "CurrentGoalHighlight"
-highlight.DepthMode = Enum.HighlightDepthMode.Occluded
-highlight.FillTransparency = 0.82
-highlight.OutlineTransparency = 0.05
-highlight.FillColor = Theme.Mint
-highlight.OutlineColor = Theme.Mint
-highlight.Parent = Workspace
+local list = Instance.new("ScrollingFrame")
+list.Name = "Plants"
+list.BackgroundTransparency = 1
+list.BorderSizePixel = 0
+list.ScrollBarThickness = 4
+list.ScrollBarImageColor3 = Theme.Wood
+list.CanvasSize = UDim2.fromOffset(0, 0)
+list.Parent = catalogue
+local footer = frame(catalogue, "Expansion", Theme.Panel, 10)
+local bedsText = text(footer, "Beds", "Грядки 2 / 8", 15, Theme.Ink, Enum.Font.GothamBold)
+local expansionNote = text(footer, "Description", "Більше місця для рослин", 12, Theme.Muted)
+local expandButton = button(footer, "UnlockBed", "Нова грядка · 50")
 
-local function setTarget(partName: string?, color: Color3)
-	highlight.FillColor = color
-	highlight.OutlineColor = color
-	local index = player:GetAttribute("PlotIndex")
-	local plots = Workspace:FindFirstChild("PlayerPlots")
-	local plot = index and plots and plots:FindFirstChild("Laboratory_" .. index)
-	highlight.Adornee = plot and partName and plot:FindFirstChild(partName) or nil
+type Card = { Frame: Frame, Preview: ViewportFrame, Name: TextLabel, Rarity: TextLabel, Stats: TextLabel, Buy: TextButton, Id: string }
+local cards: {Card} = {}
+for _, crop in Crops.List do
+	local row = frame(list, crop.Id, Theme.Panel, 10)
+	local preview = Instance.new("ViewportFrame")
+	preview.Name = "Preview"
+	preview.BackgroundTransparency = 1
+	preview.Ambient = Color3.fromRGB(220, 207, 174)
+	preview.LightColor = Color3.fromRGB(255, 243, 212)
+	preview.LightDirection = Vector3.new(-1, -1, -1)
+	preview.Parent = row
+	local world = Instance.new("WorldModel")
+	world.Parent = preview
+	local model = Assets.Crop(crop.Id, Vector3.zero)
+	model.Parent = world
+	local cf, bounds = model:GetBoundingBox()
+	local camera = Instance.new("Camera")
+	camera.FieldOfView = 40
+	camera.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0.7, 0.45, 1).Unit * math.max(bounds.X, bounds.Y, bounds.Z) * 1.7, cf.Position)
+	camera.Parent = preview
+	preview.CurrentCamera = camera
+	local nameLabel = text(row, "PlantName", crop.Name, 18, Theme.Ink, Enum.Font.GothamBold)
+	local rarity = text(row, "Rarity", crop.Rarity, 12, crop.Color, Enum.Font.GothamBold)
+	local stats = text(row, "Stats", crop.GrowSeconds .. " с росту   ·   +" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с", 13, Theme.Muted)
+	local buy = button(row, "Plant", "Посадити · " .. crop.Price)
+	table.insert(cards, { Frame = row, Preview = preview, Name = nameLabel, Rarity = rarity, Stats = stats, Buy = buy, Id = crop.Id })
 end
+
+local toast = frame(screen, "Toast", Theme.Paper, 10)
+toast.AnchorPoint = Vector2.new(0.5, 0)
+toast.Position = UDim2.new(0.5, 0, 0, 14)
+toast.ZIndex = 30
+toast.Visible = false
+local toastText = text(toast, "Message", "", 15, Theme.Ink, Enum.Font.GothamBold)
+toastText.Position = UDim2.fromOffset(12, 6)
+toastText.Size = UDim2.new(1, -24, 1, -12)
+toastText.TextWrapped = true
+toastText.TextXAlignment = Enum.TextXAlignment.Center
+
+local selectedBed: number? = nil
+local pending = false
+local errorMessage: string? = nil
+local refreshShop: () -> ()
+
+local function getFarm(): Model?
+	local index = player:GetAttribute("FarmIndex")
+	local root = Workspace:FindFirstChild("PlayerFarms")
+	return (index and root and root:FindFirstChild("Farm_" .. index)) :: Model?
+end
+
+local function emptyBed(preferred: number?): number?
+	local farm = getFarm()
+	local beds = farm and farm:FindFirstChild("Beds")
+	if not beds then return nil end
+	local function available(index: number): boolean
+		local bed = beds:FindFirstChild("Bed_" .. index)
+		return bed ~= nil and bed:GetAttribute("Unlocked") == true and bed:GetAttribute("CropId") == ""
+	end
+	if preferred and available(preferred) then return preferred end
+	for index = 1, player:GetAttribute("FarmSlots") or Config.StartingBeds do
+		if available(index) then return index end
+	end
+	return nil
+end
+
+local toastVersion = 0
+local function showToast(message: string, ok: boolean?)
+	toastVersion += 1
+	local version = toastVersion
+	toastText.Text = message
+	toastText.TextColor3 = ok == false and Theme.Barn or Theme.Ink
+	toast.Visible = true
+	task.delay(4, function() if toastVersion == version then toast.Visible = false end end)
+end
+
+local function closeCatalogue()
+	if pending then return end
+	overlay.Visible = false
+	ContextActionService:UnbindAction("CloseSeedCatalogue")
+end
+
+refreshShop = function()
+	local coins = player:GetAttribute("Coins") or 0
+	local slots = player:GetAttribute("FarmSlots") or Config.StartingBeds
+	selectedBed = emptyBed(selectedBed)
+	local fullMessage = slots < Config.MaxBeds and "Усі грядки зайняті. Відкрий нову нижче." or "Ферма заповнена. Рослини заробляють самі."
+	subtitle.Text = errorMessage or (selectedBed and ("Грядка " .. selectedBed .. " · У тебе " .. coins .. " мон.") or fullMessage)
+	subtitle.TextColor3 = errorMessage and Theme.Barn or Theme.Muted
+	for _, card in cards do
+		local crop = Crops.ById[card.Id]
+		local enabled = not pending and selectedBed ~= nil and coins >= crop.Price
+		card.Buy.Active = enabled
+		card.Buy.Selectable = enabled
+		card.Buy.AutoButtonColor = enabled
+		card.Buy.BackgroundColor3 = enabled and Theme.Green or Theme.Paper
+		card.Buy.TextColor3 = enabled and Theme.Paper or Theme.Muted
+		card.Buy.Text = pending and "Зачекай…" or ("Посадити · " .. crop.Price)
+	end
+	local price = player:GetAttribute("NextBedCost") or 0
+	bedsText.Text = "Грядки " .. slots .. " / " .. Config.MaxBeds
+	expansionNote.Text = slots < Config.MaxBeds and "Більше місця для рослин" or "Ферму повністю відкрито"
+	expandButton.Text = slots < Config.MaxBeds and ("Нова грядка · " .. price) or "Усі грядки відкрито"
+	local enabled = not pending and slots < Config.MaxBeds and coins >= price
+	expandButton.Active = enabled
+	expandButton.Selectable = enabled
+	expandButton.AutoButtonColor = enabled
+	expandButton.BackgroundColor3 = enabled and Theme.Green or Theme.Paper
+	expandButton.TextColor3 = enabled and Theme.Paper or Theme.Muted
+end
+
+local function openCatalogue(index: number?)
+	if not player:GetAttribute("FarmIndex") then return end
+	selectedBed = emptyBed(index)
+	errorMessage = nil
+	overlay.Visible = true
+	refreshShop()
+	ContextActionService:BindActionAtPriority("CloseSeedCatalogue", function(_, state)
+		if state == Enum.UserInputState.Begin then closeCatalogue() end
+		return Enum.ContextActionResult.Sink
+	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Escape, Enum.KeyCode.ButtonB)
+end
+
+local function sendAction(action: string, cropId: string?)
+	if pending then return end
+	if action == "Plant" then
+		selectedBed = emptyBed(selectedBed)
+		local crop = cropId and Crops.ById[cropId]
+		if not selectedBed or not crop or (player:GetAttribute("Coins") or 0) < crop.Price then return end
+	elseif (player:GetAttribute("FarmSlots") or 0) >= Config.MaxBeds or (player:GetAttribute("Coins") or 0) < (player:GetAttribute("NextBedCost") or 0) then
+		return
+	end
+	pending = true
+	errorMessage = nil
+	refreshShop()
+	local success, result = pcall(function() return request:InvokeServer(action, selectedBed, cropId) end)
+	pending = false
+	if success and typeof(result) == "table" and result.ok then
+		if action == "Plant" then closeCatalogue() else selectedBed = result.bedIndex end
+		showToast(result.message, true)
+	else
+		errorMessage = success and result.message or "Не вдалося посадити. Спробуй ще раз."
+		showToast(errorMessage or "Спробуй ще раз.", false)
+	end
+	refreshShop()
+end
+
+for _, card in cards do card.Buy.Activated:Connect(function() sendAction("Plant", card.Id) end) end
+expandButton.Activated:Connect(function() sendAction("Unlock", nil) end)
+plantButton.Activated:Connect(function() openCatalogue(nil) end)
+closeButton.Activated:Connect(closeCatalogue)
+backdrop.Activated:Connect(closeCatalogue)
+openMenu.OnClientEvent:Connect(openCatalogue)
+feedback.OnClientEvent:Connect(showToast)
 
 local function update()
-	local level = player:GetAttribute("Level") or 1
-	local xp = player:GetAttribute("XP") or 0
-	local required = math.floor(100 * (level ^ 1.35))
-	local energy = player:GetAttribute("Energy") or 0
-	local stored = player:GetAttribute("StoredEnergy") or 0
-	local capacity = player:GetAttribute("StorageLimit") or Config.EyeFlowerStorageLimit
-	local reactorLevel = player:GetAttribute("ProductionLevel") or 1
-	local storageLevel = player:GetAttribute("StorageLevel") or 1
-	local sector = player:GetAttribute("PlotIndex")
-
-	sectorText.Text = sector and string.format("ТВОЯ БАЗА / СЕКТОР %02d", sector) or "ТВОЯ БАЗА / ОЧІКУВАННЯ"
-	levelText.Text = string.format("РІВЕНЬ %02d", level)
-	xpText.Text = string.format("%d / %d XP", xp, required)
-	xpFill.Size = UDim2.fromScale(math.clamp(xp / required, 0, 1), 1)
-	energyText.Text = tostring(energy)
-	storedText.Text = string.format("%d / %d", stored, capacity)
-
-	local target: string? = "EnergyCollector"
-	local targetColor = Theme.Mint
-	if not sector or not player:GetAttribute("CollectedOnce") then
-		stepText.Text = "КРОК 1 / 3"
-		goalTitle.Text = "ЗАБЕРИ ПЕРШИЙ ЗАРЯД"
-		goalBody.Text = "Окоцвіт наповнює колектор кожні 5 секунд. Підійди до центру бази й забери енергію."
-		progressText.Text = stored >= Config.EyeFlowerEnergyPerCycle and string.format("КОЛЕКТОР ГОТОВИЙ: %d ЕН. · ЗАБЕРИ", stored) or string.format("ЗАРЯДЖАЄТЬСЯ: %d / %d", stored, Config.EyeFlowerEnergyPerCycle)
-		goalFill.Size = UDim2.fromScale(math.clamp(stored / Config.EyeFlowerEnergyPerCycle, 0, 1), 1)
-		targetText.Text = "ЦІЛЬ: КОЛЕКТОР ПО ЦЕНТРУ БАЗИ"
-	elseif reactorLevel < 2 then
-		stepText.Text = "КРОК 2 / 3"
-		goalTitle.Text = "ПОКРАЩ РЕАКТОР"
-		goalBody.Text = "Збери 80 енергії. Реактор праворуч подвоїть швидкість виробництва."
-		progressText.Text = string.format("НА ПОКРАЩЕННЯ: %d / %d ЕН.", energy, Config.ProductionUpgradeCost)
-		goalFill.Size = UDim2.fromScale(math.clamp(energy / Config.ProductionUpgradeCost, 0, 1), 1)
-		if energy >= Config.ProductionUpgradeCost then
-			target = "ProductionPedestal"
-			targetColor = Theme.Amber
-			targetText.Text = "ГОТОВО: РЕАКТОР ПРАВОРУЧ"
-		else
-			targetText.Text = "ЦІЛЬ: ЗБИРАЙ ЗАРЯД У КОЛЕКТОРІ"
-		end
-	elseif storageLevel < 2 then
-		stepText.Text = "КРОК 3 / 3"
-		goalTitle.Text = "РОЗШИР СХОВИЩЕ"
-		goalBody.Text = "Збери 150 енергії. Сховище ліворуч збільшить місткість колектора до 200."
-		progressText.Text = string.format("НА ПОКРАЩЕННЯ: %d / %d ЕН.", energy, Config.StorageUpgradeCost)
-		goalFill.Size = UDim2.fromScale(math.clamp(energy / Config.StorageUpgradeCost, 0, 1), 1)
-		if energy >= Config.StorageUpgradeCost then
-			target = "StoragePedestal"
-			targetColor = Theme.Amber
-			targetText.Text = "ГОТОВО: СХОВИЩЕ ЛІВОРУЧ"
-		else
-			targetText.Text = "ЦІЛЬ: ЗБИРАЙ ЗАРЯД У КОЛЕКТОРІ"
-		end
+	local coins = player:GetAttribute("Coins") or 0
+	local slots = player:GetAttribute("FarmSlots") or Config.StartingBeds
+	local used = player:GetAttribute("UsedBeds") or 0
+	local mature = player:GetAttribute("MatureBeds") or 0
+	coinsText.Text = tostring(coins)
+	incomeText.Text = "+" .. (player:GetAttribute("Income") or 0) .. " / " .. Config.IncomeInterval .. " с"
+	farmText.Text = string.format("Грядки %d / %d · Рівень %d", used, slots, player:GetAttribute("Level") or 1)
+	plantButton.Text = used < slots and "Посадити" or (slots < Config.MaxBeds and "Розширити ферму" or "Моя ферма")
+	if used == 0 then
+		hintText.Text = "Посади гарбуз — він почне заробляти."
+	elseif mature == 0 then
+		hintText.Text = "Рослини ростуть. Монети надходитимуть самі."
 	else
-		stepText.Text = "БАЗА 3 / 3"
-		goalTitle.Text = "БАЗА ГОТОВА"
-		goalBody.Text = "База готова. Збирай заряд далі; експедиції поїздом додамо наступним етапом."
-		progressText.Text = "РЕАКТОР ×2   ·   КОЛЕКТОР 200"
-		goalFill.Size = UDim2.fromScale(1, 1)
-		targetText.Text = "ПОВЕРТАЙСЯ ДО КОЛЕКТОРА ПО ЗАРЯД"
+		hintText.Text = "Дохід надходить сам. Сади ще й розвивай ферму."
 	end
-	setTarget(target, targetColor)
+	if overlay.Visible then refreshShop() end
 end
-
-for _, attribute in {"Level", "XP", "Energy", "StoredEnergy", "StorageLimit", "PlotIndex", "ProductionLevel", "StorageLevel", "CollectedOnce"} do
+for _, attribute in {"Coins", "FarmIndex", "FarmSlots", "UsedBeds", "GrowingBeds", "MatureBeds", "Income", "NextBedCost", "Level"} do
 	player:GetAttributeChangedSignal(attribute):Connect(update)
 end
 update()
 
-local noticeVersion = 0
-local function showNotice()
-	local message = player:GetAttribute("BaseNotice")
-	if not message or message == "" then return end
-	noticeVersion += 1
-	local version = noticeVersion
-	noticeText.Text = message
-	notice.Visible = true
-	task.delay(4, function()
-		if noticeVersion == version then notice.Visible = false end
-	end)
-end
-player:GetAttributeChangedSignal("BaseNotice"):Connect(showNotice)
-showNotice()
-
 local function resize()
-	local camera = Workspace.CurrentCamera
-	if not camera then return end
-	local viewport = camera.ViewportSize
-	local mobile = UserInputService.TouchEnabled or viewport.X < 740 or viewport.Y < 600
-	local portrait = viewport.X < 600 or viewport.Y > viewport.X
-	local scale = mobile and (portrait and (viewport.X < 360 and 0.88 or 0.96) or 0.86) or 1
-	statusScale.Scale = scale
-	objectiveScale.Scale = scale
-	noticeScale.Scale = scale
-	if mobile then
-		if portrait then
-			objective.Position = UDim2.fromOffset(14, 14 + 190 * scale + 14)
-			notice.Position = UDim2.fromOffset(14, 14 + 190 * scale + 14 + 198 * scale + 10)
-		else
-			objective.Position = UDim2.new(1, -(338 * scale + 14), 0, 88)
-			notice.Position = UDim2.new(0.5, -(328 * scale) / 2, 1, -(48 * scale + 68))
-		end
-	else
-		objective.Position = UDim2.new(1, -352, 0, 264)
-		notice.Position = UDim2.new(0.5, -164, 1, -65)
+	local view = screen.AbsoluteSize
+	if view.X <= 0 or view.Y <= 0 then return end
+	local portrait = view.X < 620
+	local compact = not portrait and view.Y < 550
+	status.Size = UDim2.fromOffset(portrait and math.min(254, view.X - 28) or 254, 126)
+	hint.Size = UDim2.fromOffset(math.min(470, view.X - 28), 38)
+	toast.Size = UDim2.fromOffset(math.min(430, view.X - 28), 56)
+	toast.Position = UDim2.new(0.5, 0, 0, portrait and 150 or (compact and 146 or 14))
+	local width = math.min(portrait and 430 or 680, view.X - 24)
+	local desiredHeight = portrait and 560 or (compact and 332 or 420)
+	local height = math.min(desiredHeight, view.Y - 16)
+	local headerHeight = portrait and 80 or (compact and 58 or 72)
+	local footerHeight = portrait and 82 or (compact and 58 or 70)
+	local rowHeight = portrait and 124 or (compact and 68 or 86)
+	local gap = compact and 6 or 8
+	catalogue.Size = UDim2.fromOffset(width, height)
+	title.Position = UDim2.fromOffset(18, compact and 5 or 10)
+	title.Size = UDim2.fromOffset(width - 88, compact and 28 or 34)
+	title.TextSize = compact and 23 or 27
+	subtitle.Position = UDim2.fromOffset(18, compact and 33 or 44)
+	subtitle.Size = UDim2.fromOffset(width - 50, portrait and 31 or 22)
+	subtitle.TextSize = compact and 13 or 14
+	closeButton.Position = UDim2.new(1, -54, 0, compact and 5 or 10)
+	list.Position = UDim2.fromOffset(12, headerHeight)
+	list.Size = UDim2.fromOffset(width - 24, math.max(40, height - headerHeight - footerHeight))
+	list.CanvasSize = UDim2.fromOffset(0, #cards * (rowHeight + gap))
+	for index, card in cards do
+		local rowWidth = width - 30
+		card.Frame.Position = UDim2.fromOffset(0, (index - 1) * (rowHeight + gap))
+		card.Frame.Size = UDim2.fromOffset(rowWidth, rowHeight)
+		card.Preview.Position = UDim2.fromOffset(5, 4)
+		card.Preview.Size = UDim2.fromOffset(portrait and 85 or (compact and 76 or 88), portrait and 110 or rowHeight - 8)
+		local contentX = portrait and 96 or (compact and 86 or 100)
+		local textWidth = rowWidth - contentX - (portrait and 8 or 140)
+		card.Name.Position = UDim2.fromOffset(contentX, compact and 3 or 7)
+		card.Name.Size = UDim2.fromOffset(textWidth, 24)
+		card.Name.TextSize = compact and 16 or 18
+		card.Rarity.Position = UDim2.fromOffset(contentX, compact and 25 or 31)
+		card.Rarity.Size = UDim2.fromOffset(textWidth, 17)
+		card.Stats.Position = UDim2.fromOffset(contentX, compact and 44 or 51)
+		card.Stats.Size = UDim2.fromOffset(portrait and rowWidth - contentX - 6 or textWidth, 19)
+		card.Stats.TextSize = compact and 12 or 13
+		card.Buy.Position = portrait and UDim2.fromOffset(contentX, 75) or UDim2.new(1, -134, 0.5, -22)
+		card.Buy.Size = UDim2.fromOffset(portrait and rowWidth - contentX - 10 or 124, 44)
+		card.Buy.TextSize = 14
 	end
+	footer.Position = UDim2.fromOffset(12, height - footerHeight + 4)
+	footer.Size = UDim2.fromOffset(width - 24, footerHeight - 10)
+	bedsText.Position = UDim2.fromOffset(10, 3)
+	bedsText.Size = UDim2.fromOffset(portrait and 118 or 240, 23)
+	expansionNote.Position = UDim2.fromOffset(10, 27)
+	expansionNote.Size = UDim2.fromOffset(portrait and 118 or 260, 18)
+	expansionNote.Visible = not portrait
+	expandButton.Position = UDim2.new(1, portrait and -184 or -224, 0.5, -22)
+	expandButton.Size = UDim2.fromOffset(portrait and 174 or 214, 44)
+	expandButton.TextSize = portrait and 13 or 14
+	refreshShop()
 end
-
-local function watchCamera()
-	local camera = Workspace.CurrentCamera
-	if camera then camera:GetPropertyChangedSignal("ViewportSize"):Connect(resize) end
-	resize()
-end
-Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(watchCamera)
-watchCamera()
+screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
+resize()
