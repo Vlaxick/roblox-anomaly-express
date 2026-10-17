@@ -14,6 +14,10 @@ local GameConfig = {
 	EyeFlowerEnergyPerCycle = 5,
 	EyeFlowerStorageLimit = 100,
 	EyeFlowerCollectionXP = 5,
+	ProductionUpgradeCost = 80,
+	StorageUpgradeCost = 150,
+	ProductionUpgradeMultiplier = 2,
+	StorageUpgradeMultiplier = 2,
 }
 
 return table.freeze(GameConfig)
