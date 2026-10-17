@@ -4,398 +4,335 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local ContextActionService = game:GetService("ContextActionService")
+local GuiService = game:GetService("GuiService")
 local player = Players.LocalPlayer
 local Theme = require(ReplicatedStorage.Shared.Config.Theme)
 local Config = require(ReplicatedStorage.Shared.Config.GameConfig)
-local Crops = require(ReplicatedStorage.Shared.Config.Crops)
-local Assets = require(ReplicatedStorage.Shared.FarmAssets)
-local remotes = ReplicatedStorage:WaitForChild("FarmRemotes")
+local Finds = require(ReplicatedStorage.Shared.Config.Finds)
+local Assets = require(ReplicatedStorage.Shared.CollectionAssets)
+local remotes = ReplicatedStorage:WaitForChild("CollectionRemotes")
 local request = remotes:WaitForChild("Request") :: RemoteFunction
-local openMenu = remotes:WaitForChild("OpenPlantMenu") :: RemoteEvent
+local openMenu = remotes:WaitForChild("OpenCatalogue") :: RemoteEvent
 local feedback = remotes:WaitForChild("Feedback") :: RemoteEvent
+local showCharacter = remotes:WaitForChild("ShowCharacter") :: RemoteEvent
 
 local gui = Instance.new("ScreenGui")
-gui.Name = "AnomalyHUD"
-gui.ResetOnSpawn = false
-gui.DisplayOrder = 10
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Name = "AnomalyHUD"; gui.ResetOnSpawn = false; gui.DisplayOrder = 10
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling; gui.Parent = player:WaitForChild("PlayerGui")
 local screen = Instance.new("Frame")
-screen.Name = "SafeArea"
-screen.Size = UDim2.fromScale(1, 1)
-screen.BackgroundTransparency = 1
-screen.Parent = gui
+screen.Name = "SafeArea"; screen.Size = UDim2.fromScale(1, 1); screen.BackgroundTransparency = 1; screen.Parent = gui
 
 local function rounded(object: GuiObject, radius: number)
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, radius)
-	corner.Parent = object
+	local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0, radius); corner.Parent = object
 end
-
 local function frame(parent: Instance, name: string, color: Color3, radius: number?): Frame
 	local f = Instance.new("Frame")
-	f.Name = name
-	f.BackgroundColor3 = color
-	f.BorderSizePixel = 0
-	f.Parent = parent
+	f.Name = name; f.BackgroundColor3 = color; f.BorderSizePixel = 0; f.Parent = parent
 	if radius then rounded(f, radius) end
 	return f
 end
-
 local function text(parent: Instance, name: string, value: string, size: number, color: Color3, font: Enum.Font?): TextLabel
 	local t = Instance.new("TextLabel")
-	t.Name = name
-	t.BackgroundTransparency = 1
-	t.Text = value
-	t.TextSize = size
-	t.TextColor3 = color
-	t.Font = font or Enum.Font.GothamMedium
-	t.TextXAlignment = Enum.TextXAlignment.Left
-	t.Parent = parent
+	t.Name = name; t.BackgroundTransparency = 1; t.Text = value; t.TextSize = size
+	t.TextColor3 = color; t.Font = font or Enum.Font.GothamMedium; t.TextXAlignment = Enum.TextXAlignment.Left; t.Parent = parent
 	return t
 end
-
 local function button(parent: Instance, name: string, value: string): TextButton
 	local b = Instance.new("TextButton")
-	b.Name = name
-	b.BackgroundColor3 = Theme.Action
-	b.BorderSizePixel = 0
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 16
-	b.TextColor3 = Theme.UIText
-	b.Text = value
-	b.AutoButtonColor = true
-	b.Parent = parent
+	b.Name = name; b.BackgroundColor3 = Theme.Action; b.BorderSizePixel = 0; b.Font = Enum.Font.GothamBold
+	b.TextSize = 15; b.TextColor3 = Theme.UIText; b.Text = value; b.AutoButtonColor = true; b.Parent = parent
 	rounded(b, 9)
 	local stroke = Instance.new("UIStroke")
-	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = Theme.UIBorder
-	stroke.Transparency = 0.65
-	stroke.Parent = b
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border; stroke.Color = Theme.UIBorder; stroke.Transparency = 0.4; stroke.Parent = b
 	return b
 end
-
-local status = frame(screen, "FarmStatus", Theme.UIBackground, 12)
-status.Position = UDim2.fromOffset(14, 12)
-status.Size = UDim2.fromOffset(254, 126)
-local edge = Instance.new("UIStroke")
-edge.Color = Theme.UIBorder
-edge.Thickness = 2
-edge.Parent = status
-local heading = text(status, "Title", "Моя база", 21, Theme.UIText, Enum.Font.FredokaOne)
-heading.Position = UDim2.fromOffset(16, 8)
-heading.Size = UDim2.fromOffset(220, 28)
-local coinLabel = text(status, "CoinLabel", "Монети", 12, Theme.UISecondary)
-coinLabel.Position = UDim2.fromOffset(16, 42)
-coinLabel.Size = UDim2.fromOffset(95, 18)
-local coinsText = text(status, "Coins", "40", 29, Theme.UIText, Enum.Font.GothamBold)
-coinsText.Position = UDim2.fromOffset(16, 61)
-coinsText.Size = UDim2.fromOffset(110, 34)
-local incomeText = text(status, "Income", "+0 / 5 с", 18, Theme.Harvest, Enum.Font.GothamBold)
-incomeText.Position = UDim2.fromOffset(132, 59)
-incomeText.Size = UDim2.fromOffset(112, 29)
-local autoText = text(status, "AutoIncome", "автоматично", 11, Theme.UISecondary)
-autoText.Position = UDim2.fromOffset(132, 83)
-autoText.Size = UDim2.fromOffset(110, 16)
-local farmText = text(status, "Beds", "Місця 0 / 2 · Рівень 1", 12, Theme.UISecondary)
-farmText.Position = UDim2.fromOffset(16, 103)
-farmText.Size = UDim2.fromOffset(230, 18)
-
-local plantButton = button(screen, "PlantButton", "Розмістити")
-plantButton.AnchorPoint = Vector2.new(0.5, 1)
-plantButton.Position = UDim2.new(0.5, 0, 1, -14)
-plantButton.Size = UDim2.fromOffset(202, 48)
-plantButton.TextSize = 18
-local hint = frame(screen, "FarmHint", Theme.UIBackground, 9)
-hint.AnchorPoint = Vector2.new(0.5, 1)
-hint.Position = UDim2.new(0.5, 0, 1, -72)
-local hintText = text(hint, "Text", "Розмісти міміка — вирости свій перший об’єкт.", 14, Theme.UIText)
-hintText.Size = UDim2.new(1, -20, 1, 0)
-hintText.Position = UDim2.fromOffset(10, 0)
-hintText.TextXAlignment = Enum.TextXAlignment.Center
-hintText.TextWrapped = true
-
-local overlay = frame(screen, "CatalogueOverlay", Theme.Night)
-overlay.Size = UDim2.fromScale(1, 1)
-overlay.BackgroundTransparency = 1
-overlay.ZIndex = 20
-overlay.Visible = false
-local backdrop = Instance.new("TextButton")
-backdrop.Name = "CloseBackdrop"
-backdrop.Size = UDim2.fromScale(1, 1)
-backdrop.BackgroundColor3 = Theme.Night
-backdrop.BackgroundTransparency = 0.3
-backdrop.Text = ""
-backdrop.AutoButtonColor = false
-backdrop.BorderSizePixel = 0
-backdrop.Modal = true
-backdrop.Selectable = false
-backdrop.Parent = overlay
-local catalogue = frame(overlay, "SeedCatalogue", Theme.UIBackground, 14)
-catalogue.AnchorPoint = Vector2.new(0.5, 0.5)
-catalogue.Position = UDim2.fromScale(0.5, 0.5)
-catalogue.Active = true
-local catalogueBorder = Instance.new("UIStroke")
-catalogueBorder.Color = Theme.UIBorder
-catalogueBorder.Thickness = 3
-catalogueBorder.Parent = catalogue
-local title = text(catalogue, "Title", "Що виростимо?", 27, Theme.UIText, Enum.Font.FredokaOne)
-local subtitle = text(catalogue, "Subtitle", "Місце 1 · У тебе 40 мон.", 14, Theme.UISecondary)
-subtitle.TextWrapped = true
-local closeButton = button(catalogue, "CloseCatalogue", "×")
-closeButton.BackgroundColor3 = Theme.UISurface
-closeButton.TextColor3 = Theme.UIText
-closeButton.TextSize = 26
-closeButton.Size = UDim2.fromOffset(44, 44)
-
-local list = Instance.new("ScrollingFrame")
-list.Name = "Plants"
-list.BackgroundTransparency = 1
-list.BorderSizePixel = 0
-list.ScrollBarThickness = 4
-list.ScrollBarImageColor3 = Theme.UIBorder
-list.CanvasSize = UDim2.fromOffset(0, 0)
-list.Parent = catalogue
-local footer = frame(catalogue, "Expansion", Theme.UISurface, 10)
-local bedsText = text(footer, "Beds", "Місця 2 / 8", 15, Theme.UIText, Enum.Font.GothamBold)
-local expansionNote = text(footer, "Description", "Більше об’єктів на базі", 12, Theme.UISecondary)
-local expandButton = button(footer, "UnlockBed", "Нове місце · 50")
-
-type Card = { Frame: Frame, Preview: ViewportFrame, Name: TextLabel, Rarity: TextLabel, Stats: TextLabel, Buy: TextButton, Id: string }
-local cards: {Card} = {}
-for _, crop in Crops.List do
-	local row = frame(list, crop.Id, Theme.UISurface, 10)
-	local preview = Instance.new("ViewportFrame")
-	preview.Name = "Preview"
-	preview.BackgroundTransparency = 1
-	preview.Ambient = Color3.fromRGB(220, 207, 174)
-	preview.LightColor = Color3.fromRGB(255, 243, 212)
-	preview.LightDirection = Vector3.new(-1, -1, -1)
-	preview.Parent = row
-	local world = Instance.new("WorldModel")
-	world.Parent = preview
-	local model = Assets.Crop(crop.Id, Vector3.zero)
-	model.Parent = world
+local function place(object: GuiObject, x: number, y: number, w: number, h: number)
+	object.Position = UDim2.fromOffset(x, y); object.Size = UDim2.fromOffset(w, h)
+end
+local function preview(parent: Instance): ViewportFrame
+	local v = Instance.new("ViewportFrame")
+	v.Name = "Preview"; v.BackgroundTransparency = 1; v.Ambient = Color3.fromRGB(220, 207, 194)
+	v.LightColor = Color3.fromRGB(255, 243, 212); v.LightDirection = Vector3.new(-1, -1, -1); v.Parent = parent
+	return v
+end
+local function setPreview(v: ViewportFrame, model: Model)
+	v:ClearAllChildren()
+	local world = Instance.new("WorldModel"); world.Parent = v; model.Parent = world
 	local cf, bounds = model:GetBoundingBox()
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = 40
-	camera.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0.7, 0.45, 1).Unit * math.max(bounds.X, bounds.Y, bounds.Z) * 1.7, cf.Position)
-	camera.Parent = preview
-	preview.CurrentCamera = camera
-	local nameLabel = text(row, "PlantName", crop.Name, 18, Theme.UIText, Enum.Font.GothamBold)
-	local rarity = text(row, "Rarity", crop.Rarity, 12, crop.Color, Enum.Font.GothamBold)
-	local stats = text(row, "Stats", crop.GrowSeconds .. " с росту   ·   +" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с", 13, Theme.UISecondary)
-	local buy = button(row, "Plant", "Розмістити · " .. crop.Price)
-	table.insert(cards, { Frame = row, Preview = preview, Name = nameLabel, Rarity = rarity, Stats = stats, Buy = buy, Id = crop.Id })
+	camera.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0.55, 0.25, 1).Unit * math.max(bounds.X, bounds.Y, bounds.Z) * 1.65, cf.Position)
+	camera.Parent = v; v.CurrentCamera = camera
 end
+local function enable(b: TextButton, enabled: boolean)
+	b.Active = enabled; b.Selectable = enabled; b.AutoButtonColor = enabled
+	b.BackgroundColor3 = enabled and Theme.Action or Theme.UIBackground
+	b.TextColor3 = enabled and Theme.UIText or Theme.UISecondary
+end
+
+local status = frame(screen, "BaseStatus", Theme.UIBackground, 12)
+place(status, 14, 12, 254, 126)
+local edge = Instance.new("UIStroke"); edge.Color = Theme.UIBorder; edge.Thickness = 2; edge.Parent = status
+local heading = text(status, "Title", "Моя колекція", 21, Theme.UIText, Enum.Font.FredokaOne)
+place(heading, 16, 8, 220, 28)
+place(text(status, "CoinLabel", "Монети", 12, Theme.UISecondary), 16, 42, 95, 18)
+local coinsText = text(status, "Coins", "40", 29, Theme.UIText, Enum.Font.GothamBold)
+place(coinsText, 16, 61, 110, 34)
+local incomeText = text(status, "Income", "+0 / 5 с", 18, Theme.Harvest, Enum.Font.GothamBold)
+place(incomeText, 132, 59, 112, 29)
+place(text(status, "AutoIncome", "від персонажів", 11, Theme.UISecondary), 132, 83, 112, 16)
+local baseText = text(status, "Stands", "Підставки 0 / 2 · Рівень 1", 12, Theme.UISecondary)
+place(baseText, 16, 103, 232, 18)
+
+local actions = frame(screen, "Actions", Theme.Night)
+actions.BackgroundTransparency = 1; actions.AnchorPoint = Vector2.new(0.5, 1); actions.Position = UDim2.new(0.5, 0, 1, -14)
+local catalogueButton = button(actions, "FindsButton", "Знахідки")
+local readyButton = button(actions, "OpenReady", "Відкрити")
+local hint = frame(screen, "BaseHint", Theme.UIBackground, 9)
+hint.AnchorPoint = Vector2.new(0.5, 1); hint.Position = UDim2.new(0.5, 0, 1, -72)
+local hintText = text(hint, "Text", "Обери знахідку та постав її на підставку.", 14, Theme.UIText)
+hintText.Position = UDim2.fromOffset(10, 0); hintText.Size = UDim2.new(1, -20, 1, 0)
+hintText.TextXAlignment = Enum.TextXAlignment.Center; hintText.TextWrapped = true
+
+local overlay = frame(screen, "CatalogueOverlay", Theme.Night)
+overlay.Size = UDim2.fromScale(1, 1); overlay.BackgroundTransparency = 1; overlay.ZIndex = 20; overlay.Visible = false
+local backdrop = Instance.new("TextButton")
+backdrop.Name = "CloseBackdrop"; backdrop.Size = UDim2.fromScale(1, 1); backdrop.BackgroundColor3 = Theme.Night
+backdrop.BackgroundTransparency = 0.25; backdrop.Text = ""; backdrop.AutoButtonColor = false
+backdrop.BorderSizePixel = 0; backdrop.Modal = true; backdrop.Selectable = false; backdrop.Parent = overlay
+local catalogue = frame(overlay, "FindCatalogue", Theme.UIBackground, 14)
+catalogue.AnchorPoint = Vector2.new(0.5, 0.5); catalogue.Position = UDim2.fromScale(0.5, 0.5); catalogue.Active = true
+local border = Instance.new("UIStroke"); border.Color = Theme.UIBorder; border.Thickness = 3; border.Parent = catalogue
+local title = text(catalogue, "Title", "Таємничі знахідки", 26, Theme.UIText, Enum.Font.FredokaOne)
+local subtitle = text(catalogue, "Subtitle", "", 14, Theme.UISecondary); subtitle.TextWrapped = true
+local closeButton = button(catalogue, "CloseCatalogue", "×"); closeButton.TextSize = 26; closeButton.BackgroundColor3 = Theme.UISurface
+local list = Instance.new("ScrollingFrame")
+list.Name = "Finds"; list.BackgroundTransparency = 1; list.BorderSizePixel = 0
+list.ScrollBarThickness = 4; list.ScrollBarImageColor3 = Theme.UIBorder; list.Parent = catalogue
+local footer = frame(catalogue, "Expansion", Theme.UISurface, 10)
+local standsText = text(footer, "Stands", "", 14, Theme.UIText, Enum.Font.GothamBold)
+local expandButton = button(footer, "UnlockStand", "Нове місце · 50")
+
+type Card = { Frame: Frame, Preview: ViewportFrame, Name: TextLabel, Rarity: TextLabel, Stats: TextLabel, Odds: TextLabel, Buy: TextButton, Id: string }
+local cards: {Card} = {}
+for _, find in Finds.List do
+	local row = frame(list, find.Id, Theme.UISurface, 10)
+	local v = preview(row); setPreview(v, Assets.Container(find.Id, Vector3.zero))
+	local name = text(row, "FindName", find.Name, 18, Theme.UIText, Enum.Font.GothamBold); name.TextWrapped = true
+	local rarity = text(row, "Rarity", find.Rarity, 13, find.Color, Enum.Font.GothamBold)
+	local stats = text(row, "Stats", "Розпакування: " .. find.OpenSeconds .. " с", 13, Theme.UISecondary)
+	local lines = {}
+	for _, drop in find.Drops do
+		local c = Finds.CharacterById[drop.Id]
+		table.insert(lines, c.Name .. " " .. drop.Weight .. "% · +" .. c.Income .. " / " .. Config.IncomeInterval .. " с")
+	end
+	local odds = text(row, "Odds", table.concat(lines, "\n"), 13, Theme.UIText)
+	odds.TextWrapped = true; odds.TextYAlignment = Enum.TextYAlignment.Top
+	local buy = button(row, "Place", "Поставити · " .. find.Price)
+	table.insert(cards, { Frame = row, Preview = v, Name = name, Rarity = rarity, Stats = stats, Odds = odds, Buy = buy, Id = find.Id })
+end
+
+-- One focused reveal, not a roulette animation with misleading near-misses.
+local revealOverlay = frame(screen, "CharacterOverlay", Theme.Night)
+revealOverlay.Size = UDim2.fromScale(1, 1); revealOverlay.BackgroundTransparency = 1
+revealOverlay.ZIndex = 20; revealOverlay.Visible = false
+local revealBackdrop = backdrop:Clone(); revealBackdrop.Parent = revealOverlay
+local reveal = frame(revealOverlay, "CharacterCard", Theme.UIBackground, 16)
+reveal.AnchorPoint = Vector2.new(0.5, 0.5); reveal.Position = UDim2.fromScale(0.5, 0.5)
+local revealBorder = border:Clone(); revealBorder.Parent = reveal
+local revealTitle = text(reveal, "Title", "Новий мешканець!", 25, Theme.UIText, Enum.Font.FredokaOne)
+local revealRarity = text(reveal, "Rarity", "", 14, Theme.Harvest, Enum.Font.GothamBold)
+local revealPreview = preview(reveal)
+local revealName = text(reveal, "CharacterName", "", 23, Theme.UIText, Enum.Font.GothamBold)
+local revealIncome = text(reveal, "Income", "", 16, Theme.Harvest, Enum.Font.GothamBold)
+for _, t in {revealTitle, revealRarity, revealName, revealIncome} do t.TextXAlignment = Enum.TextXAlignment.Center end
+local keepButton = button(reveal, "Keep", "На базу")
+local sellButton = button(reveal, "Sell", "Продати"); sellButton.BackgroundColor3 = Theme.UISurface
 
 local toast = frame(screen, "Toast", Theme.UIBackground, 10)
-toast.AnchorPoint = Vector2.new(0.5, 0)
-toast.Position = UDim2.new(0.5, 0, 0, 14)
-toast.ZIndex = 30
-toast.Visible = false
+toast.AnchorPoint = Vector2.new(0.5, 0); toast.ZIndex = 30; toast.Visible = false
 local toastText = text(toast, "Message", "", 15, Theme.UIText, Enum.Font.GothamBold)
-toastText.Position = UDim2.fromOffset(12, 6)
-toastText.Size = UDim2.new(1, -24, 1, -12)
-toastText.TextWrapped = true
-toastText.TextXAlignment = Enum.TextXAlignment.Center
-
-local selectedBed: number? = nil
-local pending = false
+toastText.Position = UDim2.fromOffset(12, 6); toastText.Size = UDim2.new(1, -24, 1, -12)
+toastText.TextWrapped = true; toastText.TextXAlignment = Enum.TextXAlignment.Center
+local selectedStand: number? = nil
+local inspectedStand: number? = nil
+local inspectedId: string? = nil
+local pending, confirmSell, inspection = false, false, false
 local errorMessage: string? = nil
+local toastVersion = 0
+local previousSelection: GuiObject? = nil
 local refreshShop: () -> ()
+local resize: () -> ()
 
-local function getFarm(): Model?
-	local index = player:GetAttribute("FarmIndex")
-	local root = Workspace:FindFirstChild("PlayerFarms")
-	return (index and root and root:FindFirstChild("Farm_" .. index)) :: Model?
+local function getStands(): Folder?
+	local index = player:GetAttribute("BaseIndex")
+	local root = Workspace:FindFirstChild("PlayerBases")
+	local base = index and root and root:FindFirstChild("Base_" .. index)
+	return (base and base:FindFirstChild("Stands")) :: Folder?
 end
-
-local function emptyBed(preferred: number?): number?
-	local farm = getFarm()
-	local beds = farm and farm:FindFirstChild("Beds")
-	if not beds then return nil end
-	local function available(index: number): boolean
-		local bed = beds:FindFirstChild("Bed_" .. index)
-		return bed ~= nil and bed:GetAttribute("Unlocked") == true and bed:GetAttribute("CropId") == ""
+local function findStand(state: string, preferred: number?): number?
+	local stands = getStands()
+	if not stands then return nil end
+	local function matches(i: number): boolean
+		local s = stands:FindFirstChild("Stand_" .. i)
+		return s ~= nil and s:GetAttribute("Unlocked") == true and s:GetAttribute("State") == state
 	end
-	if preferred and available(preferred) then return preferred end
-	for index = 1, player:GetAttribute("FarmSlots") or Config.StartingBeds do
-		if available(index) then return index end
-	end
+	if preferred and matches(preferred) then return preferred end
+	for i = 1, player:GetAttribute("BaseSlots") or Config.StartingStands do if matches(i) then return i end end
 	return nil
 end
-
-local toastVersion = 0
 local function showToast(message: string, ok: boolean?)
 	toastVersion += 1
 	local version = toastVersion
-	toastText.Text = message
-	toastText.TextColor3 = ok == false and Theme.Error or Theme.UIText
-	toast.Visible = true
+	toastText.Text = message; toastText.TextColor3 = ok == false and Theme.Error or Theme.UIText; toast.Visible = true
 	task.delay(4, function() if toastVersion == version then toast.Visible = false end end)
 end
-
-local function closeCatalogue()
+local function closeModals()
 	if pending then return end
-	overlay.Visible = false
-	ContextActionService:UnbindAction("CloseSeedCatalogue")
+	overlay.Visible = false; revealOverlay.Visible = false; confirmSell = false
+	ContextActionService:UnbindAction("CloseCollection")
+	GuiService.SelectedObject = previousSelection and previousSelection.Parent and previousSelection or nil
 end
-
-refreshShop = function()
-	local coins = player:GetAttribute("Coins") or 0
-	local slots = player:GetAttribute("FarmSlots") or Config.StartingBeds
-	selectedBed = emptyBed(selectedBed)
-	local fullMessage = slots < Config.MaxBeds and "Усі місця зайняті. Відкрий нове нижче." or "База заповнена. Об’єкти заробляють самі."
-	subtitle.Text = errorMessage or (selectedBed and ("Місце " .. selectedBed .. " · У тебе " .. coins .. " мон.") or fullMessage)
-	subtitle.TextColor3 = errorMessage and Theme.Error or Theme.UISecondary
-	for _, card in cards do
-		local crop = Crops.ById[card.Id]
-		local enabled = not pending and selectedBed ~= nil and coins >= crop.Price
-		card.Buy.Active = enabled
-		card.Buy.Selectable = enabled
-		card.Buy.AutoButtonColor = enabled
-		card.Buy.BackgroundColor3 = enabled and Theme.Action or Theme.UIBackground
-		card.Buy.TextColor3 = enabled and Theme.UIText or Theme.UISecondary
-		card.Buy.Text = pending and "Зачекай…" or ("Розмістити · " .. crop.Price)
-	end
-	local price = player:GetAttribute("NextBedCost") or 0
-	bedsText.Text = "Місця " .. slots .. " / " .. Config.MaxBeds
-	expansionNote.Text = slots < Config.MaxBeds and "Більше об’єктів на базі" or "Базу повністю відкрито"
-	expandButton.Text = slots < Config.MaxBeds and ("Нове місце · " .. price) or "Усі місця відкрито"
-	local enabled = not pending and slots < Config.MaxBeds and coins >= price
-	expandButton.Active = enabled
-	expandButton.Selectable = enabled
-	expandButton.AutoButtonColor = enabled
-	expandButton.BackgroundColor3 = enabled and Theme.Action or Theme.UIBackground
-	expandButton.TextColor3 = enabled and Theme.UIText or Theme.UISecondary
-end
-
-local function openCatalogue(index: number?)
-	if not player:GetAttribute("FarmIndex") then return end
-	selectedBed = emptyBed(index)
-	errorMessage = nil
-	overlay.Visible = true
-	refreshShop()
-	ContextActionService:BindActionAtPriority("CloseSeedCatalogue", function(_, state)
-		if state == Enum.UserInputState.Begin then closeCatalogue() end
+local function bindClose(first: GuiObject)
+	if not overlay.Visible and not revealOverlay.Visible then previousSelection = GuiService.SelectedObject end
+	ContextActionService:BindActionAtPriority("CloseCollection", function(_, state)
+		if state == Enum.UserInputState.Begin then closeModals() end
 		return Enum.ContextActionResult.Sink
 	end, false, Enum.ContextActionPriority.High.Value, Enum.KeyCode.Escape, Enum.KeyCode.ButtonB)
+	if GuiService.SelectedObject then GuiService.SelectedObject = first end
 end
-
-local function sendAction(action: string, cropId: string?)
-	if pending then return end
-	if action == "Plant" then
-		selectedBed = emptyBed(selectedBed)
-		local crop = cropId and Crops.ById[cropId]
-		if not selectedBed or not crop or (player:GetAttribute("Coins") or 0) < crop.Price then return end
-	elseif (player:GetAttribute("FarmSlots") or 0) >= Config.MaxBeds or (player:GetAttribute("Coins") or 0) < (player:GetAttribute("NextBedCost") or 0) then
-		return
+refreshShop = function()
+	local coins, slots = player:GetAttribute("Coins") or 0, player:GetAttribute("BaseSlots") or Config.StartingStands
+	selectedStand = findStand("Empty", selectedStand)
+	subtitle.Text = errorMessage or (selectedStand and ("Підставка " .. selectedStand .. " · У тебе " .. coins .. " мон.") or "Немає місця. Додай підставку або продай персонажа.")
+	subtitle.TextColor3 = errorMessage and Theme.Error or Theme.UISecondary
+	for _, card in cards do
+		local f = Finds.ById[card.Id]
+		enable(card.Buy, not pending and selectedStand ~= nil and coins >= f.Price)
+		card.Buy.Text = pending and "Зачекай…" or ("Поставити · " .. f.Price)
 	end
-	pending = true
-	errorMessage = nil
-	refreshShop()
-	local success, result = pcall(function() return request:InvokeServer(action, selectedBed, cropId) end)
+	standsText.Text = "Підставки " .. slots .. " / " .. Config.MaxStands
+	expandButton.Text = slots < Config.MaxStands and ("Нова · " .. (player:GetAttribute("NextStandCost") or 0) .. " мон.") or "Усі відкрито"
+	enable(expandButton, not pending and slots < Config.MaxStands and coins >= (player:GetAttribute("NextStandCost") or 0))
+end
+local function openCatalogue(index: number?)
+	if pending or not player:GetAttribute("BaseIndex") then return end
+	bindClose(closeButton); selectedStand = findStand("Empty", index); errorMessage = nil
+	revealOverlay.Visible = false; overlay.Visible = true; refreshShop()
+end
+local function invoke(action: string, index: number?, id: string?)
+	if pending then return end
+	pending = true; errorMessage = nil; refreshShop(); enable(readyButton, false); enable(sellButton, false)
+	local success, result = pcall(function() return request:InvokeServer(action, index, id) end)
 	pending = false
 	if success and typeof(result) == "table" and result.ok then
-		if action == "Plant" then closeCatalogue() else selectedBed = result.bedIndex end
-		showToast(result.message, true)
+		if action == "Place" or action == "Sell" then closeModals() end
+		if action == "Unlock" then selectedStand = result.standIndex end
+		if action ~= "Open" then showToast(result.message, true) end
 	else
-		errorMessage = success and result.message or "Не вдалося розмістити. Спробуй ще раз."
+		errorMessage = success and typeof(result) == "table" and result.message or "Не вдалося виконати дію. Спробуй ще раз."
 		showToast(errorMessage or "Спробуй ще раз.", false)
 	end
-	refreshShop()
+	enable(readyButton, true); enable(sellButton, true); refreshShop()
 end
-
-for _, card in cards do card.Buy.Activated:Connect(function() sendAction("Plant", card.Id) end) end
-expandButton.Activated:Connect(function() sendAction("Unlock", nil) end)
-plantButton.Activated:Connect(function() openCatalogue(nil) end)
-closeButton.Activated:Connect(closeCatalogue)
-backdrop.Activated:Connect(closeCatalogue)
+for _, card in cards do
+	card.Buy.Activated:Connect(function()
+		selectedStand = findStand("Empty", selectedStand)
+		if not selectedStand or (player:GetAttribute("Coins") or 0) < Finds.ById[card.Id].Price then return end
+		invoke("Place", selectedStand, card.Id)
+	end)
+end
+expandButton.Activated:Connect(function() invoke("Unlock", nil, nil) end)
+catalogueButton.Activated:Connect(function() openCatalogue(nil) end)
+readyButton.Activated:Connect(function()
+	local index = findStand("Ready", nil)
+	if index then invoke("Open", index, nil) else showToast("Зачекай завершення розпакування.", false) end
+end)
+closeButton.Activated:Connect(closeModals); backdrop.Activated:Connect(closeModals)
+keepButton.Activated:Connect(closeModals); revealBackdrop.Activated:Connect(closeModals)
+sellButton.Activated:Connect(function()
+	if pending or not inspectedStand or not inspectedId then return end
+	if not confirmSell then
+		confirmSell = true; sellButton.Text = "Так, продати"
+		revealIncome.Text = "Персонаж зникне, підставка звільниться."
+		return
+	end
+	invoke("Sell", inspectedStand, nil)
+end)
 openMenu.OnClientEvent:Connect(openCatalogue)
 feedback.OnClientEvent:Connect(showToast)
-
+showCharacter.OnClientEvent:Connect(function(id: string, index: number, isNew: boolean)
+	local c = Finds.CharacterById[id]
+	if not c then return end
+	bindClose(keepButton); overlay.Visible = false; revealOverlay.Visible = true; toast.Visible = false
+	inspectedStand = index; inspectedId = id; inspection = not isNew; confirmSell = false
+	revealTitle.Text = isNew and "Новий мешканець!" or ("Підставка " .. index)
+	revealName.Text = c.Name; revealRarity.Text = c.Rarity; revealRarity.TextColor3 = c.Color; revealBorder.Color = c.Color
+	revealIncome.Text = "+" .. c.Income .. " монет кожні " .. Config.IncomeInterval .. " с — автоматично"
+	sellButton.Text = "Продати · " .. c.SellPrice; sellButton.Visible = inspection
+	keepButton.Text = isNew and "На базу" or "Залишити"
+	setPreview(revealPreview, Assets.Character(id, Vector3.zero)); resize()
+end)
 local function update()
-	local coins = player:GetAttribute("Coins") or 0
-	local slots = player:GetAttribute("FarmSlots") or Config.StartingBeds
-	local used = player:GetAttribute("UsedBeds") or 0
-	local mature = player:GetAttribute("MatureBeds") or 0
-	coinsText.Text = tostring(coins)
+	local slots, used = player:GetAttribute("BaseSlots") or Config.StartingStands, player:GetAttribute("UsedStands") or 0
+	local ready, residents = player:GetAttribute("ReadyFinds") or 0, player:GetAttribute("Residents") or 0
+	coinsText.Text = tostring(player:GetAttribute("Coins") or 0)
 	incomeText.Text = "+" .. (player:GetAttribute("Income") or 0) .. " / " .. Config.IncomeInterval .. " с"
-	farmText.Text = string.format("Місця %d / %d · Рівень %d", used, slots, player:GetAttribute("Level") or 1)
-	plantButton.Text = used < slots and "Розмістити" or (slots < Config.MaxBeds and "Розширити базу" or "Моя база")
-	if used == 0 then
-		hintText.Text = "Розмісти міміка — вирости свій перший об’єкт."
-	elseif mature == 0 then
-		hintText.Text = "Об’єкти ростуть. Монети надходитимуть самі."
-	else
-		hintText.Text = "Дохід надходить сам. Вирощуй ще й розвивай базу."
-	end
+	baseText.Text = string.format("Підставки %d / %d · Рівень %d", used, slots, player:GetAttribute("Level") or 1)
+	readyButton.Visible = ready > 0; readyButton.Text = "Відкрити · " .. ready
+	if ready > 0 then hintText.Text = "Знахідка готова! Відкрий і дізнайся, хто всередині."
+	elseif used == 0 then hintText.Text = "Обери знахідку та постав її на підставку."
+	elseif (player:GetAttribute("SealedFinds") or 0) > 0 then hintText.Text = "Знахідка розпаковується. Скоро можна буде відкрити."
+	elseif residents > 0 then hintText.Text = "Персонажі заробляють самі. Збирай нові знахідки!" end
 	if overlay.Visible then refreshShop() end
+	local width = actions.AbsoluteSize.X
+	if ready > 0 then place(catalogueButton, 0, 0, (width - 8) / 2, 48); place(readyButton, (width + 8) / 2, 0, (width - 8) / 2, 48)
+	else place(catalogueButton, (width - 202) / 2, 0, 202, 48) end
 end
-for _, attribute in {"Coins", "FarmIndex", "FarmSlots", "UsedBeds", "GrowingBeds", "MatureBeds", "Income", "NextBedCost", "Level"} do
-	player:GetAttributeChangedSignal(attribute):Connect(update)
-end
-update()
-
-local function resize()
+resize = function()
 	local view = screen.AbsoluteSize
 	if view.X <= 0 or view.Y <= 0 then return end
 	local portrait = view.X < 620
-	local compact = not portrait and view.Y < 550
-	status.Size = UDim2.fromOffset(portrait and math.min(254, view.X - 28) or 254, 126)
-	hint.Size = UDim2.fromOffset(math.min(470, view.X - 28), 38)
+	hint.Size = UDim2.fromOffset(math.min(510, view.X - 28), 38)
+	actions.Size = UDim2.fromOffset(math.min(380, view.X - 28), 48)
 	toast.Size = UDim2.fromOffset(math.min(430, view.X - 28), 56)
-	toast.Position = UDim2.new(0.5, 0, 0, portrait and 150 or (compact and 146 or 14))
-	local width = math.min(portrait and 430 or 680, view.X - 24)
-	local desiredHeight = portrait and 560 or (compact and 332 or 420)
-	local height = math.min(desiredHeight, view.Y - 16)
-	local headerHeight = portrait and 80 or (compact and 58 or 72)
-	local footerHeight = portrait and 82 or (compact and 58 or 70)
-	local rowHeight = portrait and 124 or (compact and 68 or 86)
-	local gap = compact and 6 or 8
-	catalogue.Size = UDim2.fromOffset(width, height)
-	title.Position = UDim2.fromOffset(18, compact and 5 or 10)
-	title.Size = UDim2.fromOffset(width - 88, compact and 28 or 34)
-	title.TextSize = compact and 23 or 27
-	subtitle.Position = UDim2.fromOffset(18, compact and 33 or 44)
-	subtitle.Size = UDim2.fromOffset(width - 50, portrait and 31 or 22)
-	subtitle.TextSize = compact and 13 or 14
-	closeButton.Position = UDim2.new(1, -54, 0, compact and 5 or 10)
-	list.Position = UDim2.fromOffset(12, headerHeight)
-	list.Size = UDim2.fromOffset(width - 24, math.max(40, height - headerHeight - footerHeight))
-	list.CanvasSize = UDim2.fromOffset(0, #cards * (rowHeight + gap))
-	for index, card in cards do
-		local rowWidth = width - 30
-		card.Frame.Position = UDim2.fromOffset(0, (index - 1) * (rowHeight + gap))
-		card.Frame.Size = UDim2.fromOffset(rowWidth, rowHeight)
-		card.Preview.Position = UDim2.fromOffset(5, 4)
-		card.Preview.Size = UDim2.fromOffset(portrait and 85 or (compact and 76 or 88), portrait and 110 or rowHeight - 8)
-		local contentX = portrait and 96 or (compact and 86 or 100)
-		local textWidth = rowWidth - contentX - (portrait and 8 or 140)
-		card.Name.Position = UDim2.fromOffset(contentX, compact and 3 or 7)
-		card.Name.Size = UDim2.fromOffset(textWidth, 24)
-		card.Name.TextSize = compact and 16 or 18
-		card.Rarity.Position = UDim2.fromOffset(contentX, compact and 25 or 31)
-		card.Rarity.Size = UDim2.fromOffset(textWidth, 17)
-		card.Stats.Position = UDim2.fromOffset(contentX, compact and 44 or 51)
-		card.Stats.Size = UDim2.fromOffset(portrait and rowWidth - contentX - 6 or textWidth, 19)
-		card.Stats.TextSize = compact and 12 or 13
-		card.Buy.Position = portrait and UDim2.fromOffset(contentX, 75) or UDim2.new(1, -134, 0.5, -22)
-		card.Buy.Size = UDim2.fromOffset(portrait and rowWidth - contentX - 10 or 124, 44)
-		card.Buy.TextSize = 14
+	toast.Position = UDim2.new(0.5, 0, 0, (portrait or view.Y < 550) and 146 or 14)
+	local w, h = math.min(portrait and 430 or 730, view.X - 24), math.min(610, view.Y - 16)
+	local header, foot, rowH = 84, 64, portrait and 222 or 132
+	catalogue.Size = UDim2.fromOffset(w, h)
+	place(title, 16, 8, w - 82, 34); title.TextSize = portrait and 22 or 26
+	place(subtitle, 16, 43, w - 32, 34); place(closeButton, w - 54, 8, 44, 44)
+	place(list, 12, header, w - 24, math.max(40, h - header - foot))
+	list.CanvasSize = UDim2.fromOffset(0, #cards * (rowH + 8))
+	for i, card in cards do
+		local rw = w - 30
+		place(card.Frame, 0, (i - 1) * (rowH + 8), rw, rowH)
+		if portrait then
+			place(card.Preview, 4, 9, 90, 125)
+			place(card.Name, 100, 8, rw - 110, 42); card.Name.TextSize = 17
+			place(card.Rarity, 100, 52, rw - 110, 18); place(card.Stats, 100, 73, rw - 110, 18)
+			place(card.Buy, 100, 99, rw - 110, 44); place(card.Odds, 12, 154, rw - 24, 62)
+		else
+			place(card.Preview, 4, 4, 112, 124)
+			place(card.Name, 124, 5, rw - 286, 28); card.Name.TextSize = 18
+			place(card.Rarity, 124, 35, rw - 286, 19); place(card.Stats, 124, 57, rw - 140, 18)
+			place(card.Buy, rw - 152, 12, 140, 44); place(card.Odds, 124, 83, rw - 140, 44)
+		end
 	end
-	footer.Position = UDim2.fromOffset(12, height - footerHeight + 4)
-	footer.Size = UDim2.fromOffset(width - 24, footerHeight - 10)
-	bedsText.Position = UDim2.fromOffset(10, 3)
-	bedsText.Size = UDim2.fromOffset(portrait and 118 or 240, 23)
-	expansionNote.Position = UDim2.fromOffset(10, 27)
-	expansionNote.Size = UDim2.fromOffset(portrait and 118 or 260, 18)
-	expansionNote.Visible = not portrait
-	expandButton.Position = UDim2.new(1, portrait and -184 or -224, 0.5, -22)
-	expandButton.Size = UDim2.fromOffset(portrait and 174 or 214, 44)
-	expandButton.TextSize = portrait and 13 or 14
-	refreshShop()
+	place(footer, 12, h - foot + 5, w - 24, foot - 10)
+	place(standsText, 10, 3, portrait and 118 or 240, 44)
+	place(expandButton, w - 190, 5, 156, 44); expandButton.TextSize = 14
+	local rW, rH = math.min(500, view.X - 24), math.min(530, view.Y - 16)
+	reveal.Size = UDim2.fromOffset(rW, rH)
+	place(revealTitle, 12, 12, rW - 24, 32); place(revealRarity, 12, 47, rW - 24, 22)
+	place(revealPreview, 12, 72, rW - 24, math.max(70, rH - 230))
+	place(revealName, 12, rH - 154, rW - 24, 32); revealName.TextSize = portrait and 20 or 23
+	place(revealIncome, 16, rH - 118, rW - 32, 42); revealIncome.TextWrapped = true; revealIncome.TextSize = portrait and 14 or 16
+	if inspection then place(keepButton, 16, rH - 62, (rW - 40) / 2, 46); place(sellButton, rW / 2 + 4, rH - 62, (rW - 40) / 2, 46)
+	else place(keepButton, (rW - 202) / 2, rH - 62, 202, 46) end
+	update(); refreshShop()
 end
+for _, attribute in {"Coins", "BaseIndex", "BaseSlots", "UsedStands", "ReadyFinds", "SealedFinds", "Residents", "Income", "NextStandCost", "Level"} do player:GetAttributeChangedSignal(attribute):Connect(update) end
 screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(resize)
+actions:GetPropertyChangedSignal("AbsoluteSize"):Connect(update)
 resize()

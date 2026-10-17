@@ -49,35 +49,6 @@ local function candleLight(anchor: BasePart, brightness: number, range: number)
 	light.Parent = anchor
 end
 
-local function mimic(parent: Instance)
-	Assets.Part(parent, "ChestBody", Vector3.new(5.6, 2.3, 3.5), CFrame.new(0, 1.5, 0), Theme.Wood, Enum.Material.WoodPlanks)
-	Assets.Part(parent, "Mouth", Vector3.new(5.3, 1, 0.25), CFrame.new(0, 2.8, 1.8), Theme.Night)
-	Assets.Part(parent, "OpenLid", Vector3.new(5.9, 1.15, 3.8), CFrame.new(0, 3.6, -0.2) * CFrame.Angles(-0.2, 0, 0), Theme.WoodLight, Enum.Material.WoodPlanks)
-	for _, x in {-2.2, 2.2} do
-		Assets.Part(parent, "IronBand", Vector3.new(0.4, 2.5, 3.65), CFrame.new(x, 1.5, 0), Theme.Iron, Enum.Material.Metal)
-		Assets.Part(parent, "LidBand", Vector3.new(0.42, 1.2, 3.9), CFrame.new(x, 3.6, -0.2) * CFrame.Angles(-0.2, 0, 0), Theme.Iron, Enum.Material.Metal)
-		ball(parent, "ClawFoot", Vector3.new(1.4, 0.8, 1.8), Vector3.new(x, 0.4, 1), Theme.Iron)
-	end
-	for _, x in {-1.2, 1.2} do
-		ball(parent, "MimicEye", Vector3.new(1, 0.75, 0.35), Vector3.new(x, 3.8, 1.83), Theme.Harvest)
-		ball(parent, "Pupil", Vector3.new(0.25, 0.5, 0.15), Vector3.new(x, 3.8, 2.03), Theme.Night)
-	end
-	for x = -1.8, 1.8, 0.72 do
-		local tooth = Instance.new("WedgePart")
-		tooth.Name = "MimicFang"
-		tooth.Size = Vector3.new(0.55, 0.8, 0.4)
-		tooth.CFrame = CFrame.new(x, 2.95, 2) * CFrame.Angles(0, math.pi / 2, math.pi)
-		tooth.Color = Theme.Paper
-		tooth.Material = Enum.Material.SmoothPlastic
-		tooth.Anchored = true
-		tooth.CanCollide = false
-		tooth.Parent = parent
-	end
-	Assets.Part(parent, "BrassLock", Vector3.new(0.65, 0.8, 0.2), CFrame.new(0, 1.4, 1.88), Theme.Harvest, Enum.Material.Metal)
-	ball(parent, "Tongue", Vector3.new(1.6, 0.3, 1.3), Vector3.new(0, 2.2, 2.2), Theme.Barn)
-
-end
-
 local function wanderingLantern(parent: Instance)
 	for _, side in {-1, 1} do
 		for _, z in {-1, 1} do
@@ -136,15 +107,15 @@ local function midnightClock(parent: Instance)
 	Assets.Part(parent, "ClockCrown", Vector3.new(4.1, 0.55, 2.8), CFrame.new(0, 9.3, 0), Theme.Iron, Enum.Material.Wood)
 end
 
-function Assets.Crop(id: string, at: Vector3): Model
+function Assets.Character(id: string, at: Vector3): Model
 	local model = Instance.new("Model")
-	model.Name = "Crop"
-	if id == "MimicChest" then
-		mimic(model)
-	elseif id == "WanderingLantern" then
+	model.Name = id
+	if id == "WanderingLantern" then
 		wanderingLantern(model)
-	else
+	elseif id == "MidnightClock" then
 		midnightClock(model)
+	else
+		error("Unknown clock/lantern character: " .. id)
 	end
 	model.WorldPivot = CFrame.new()
 	model:PivotTo(CFrame.new(at))

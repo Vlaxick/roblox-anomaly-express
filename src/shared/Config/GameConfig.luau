@@ -11,11 +11,11 @@ local GameConfig = {
 	FieldXpLossOnFailure = 0.5,
 	PlotCount = 6,
 	StartingCoins = 40,
-	StartingBeds = 2,
-	MaxBeds = 8,
+	StartingStands = 2,
+	MaxStands = 8,
 	IncomeInterval = 5,
-	GrowXP = 10,
-	BedPrices = table.freeze({ 0, 0, 50, 100, 180, 300, 480, 750 }),
+	OpenXP = 10,
+	StandPrices = table.freeze({ 0, 0, 50, 100, 180, 300, 480, 750 }),
 }
 
 return table.freeze(GameConfig)

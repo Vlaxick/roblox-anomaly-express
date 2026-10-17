@@ -4,402 +4,342 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Config = require(ReplicatedStorage.Shared.Config.GameConfig)
-local Crops = require(ReplicatedStorage.Shared.Config.Crops)
+local Finds = require(ReplicatedStorage.Shared.Config.Finds)
 local Theme = require(ReplicatedStorage.Shared.Config.Theme)
 local Assets = require(ReplicatedStorage.Shared.FarmAssets)
+local CollectionAssets = require(ReplicatedStorage.Shared.CollectionAssets)
 local LevelService = require(script.Parent.LevelService)
 local WorldService = require(script.Parent.WorldService)
 
-type Bed = {
-	Model: Model, Soil: Part, Prompt: ProximityPrompt, Label: BillboardGui,
+type Stand = {
+	Model: Model, Platform: Part, Prompt: ProximityPrompt, Label: BillboardGui,
 	Title: TextLabel, Rarity: TextLabel, Status: TextLabel, Position: Vector3,
-	CropId: string?, Crop: Model?, ReadyAt: number, NextIncome: number, Stage: number, Mature: boolean,
+	FindId: string?, CharacterId: string?, Display: Model?, ReadyAt: number, NextIncome: number, Notified: boolean,
 }
-type Farm = { Index: number, Model: Model, Owner: Player?, Unlocked: number, Beds: {Bed}, Sign: TextLabel }
-
+type Base = { Index: number, Model: Model, Owner: Player?, Unlocked: number, Stands: {Stand}, Sign: TextLabel }
 local PlotService = {}
-local farms: {Farm} = {}
-local playerFarms: {[Player]: Farm} = {}
+local bases: {Base} = {}
+local playerBases: {[Player]: Base} = {}
 local lastRequest: {[Player]: number} = {}
-local openMenu = Instance.new("RemoteEvent")
-local feedback = Instance.new("RemoteEvent")
+local random = Random.new()
+local openMenu, feedback, showCharacter = Instance.new("RemoteEvent"), Instance.new("RemoteEvent"), Instance.new("RemoteEvent")
 
 local function part(parent: Instance, name: string, size: Vector3, pos: Vector3, color: Color3, material: Enum.Material?, collide: boolean?): Part
 	return Assets.Part(parent, name, size, CFrame.new(pos), color, material, collide)
 end
-
-local function bedLabel(anchor: BasePart): (BillboardGui, TextLabel, TextLabel, TextLabel)
+local function plaque(anchor: BasePart): (BillboardGui, TextLabel, TextLabel, TextLabel)
 	local gui = Instance.new("BillboardGui")
-	gui.Name = "PlantLabel"
-	gui.Size = UDim2.fromOffset(148, 68)
-	gui.StudsOffset = Vector3.new(0, 1.4, 0)
-	gui.MaxDistance = 26
-	gui.AlwaysOnTop = false
+	gui.Name = "StandLabel"; gui.Size = UDim2.fromOffset(170, 74)
+	gui.StudsOffset = Vector3.new(0, 1.5, 0); gui.MaxDistance = 28
+	gui.AlwaysOnTop = true
 	gui.Parent = anchor
 	local panel = Instance.new("Frame")
-	panel.Size = UDim2.fromScale(1, 1)
-	panel.BackgroundColor3 = Theme.UIBackground
-	panel.BackgroundTransparency = 0.06
-	panel.BorderSizePixel = 0
-	panel.Parent = gui
+	panel.Size = UDim2.fromScale(1, 1); panel.BackgroundColor3 = Theme.UIBackground
+	panel.BackgroundTransparency = 0.06; panel.BorderSizePixel = 0; panel.Parent = gui
 	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 7)
-	corner.Parent = panel
+	corner.CornerRadius = UDim.new(0, 7); corner.Parent = panel
 	local function line(y: number, height: number, size: number, font: Enum.Font): TextLabel
 		local t = Instance.new("TextLabel")
-		t.BackgroundTransparency = 1
-		t.Position = UDim2.fromOffset(6, y)
-		t.Size = UDim2.new(1, -12, 0, height)
-		t.TextColor3 = Theme.UIText
-		t.Font = font
-		t.TextSize = size
-		t.Parent = panel
+		t.BackgroundTransparency = 1; t.Position = UDim2.fromOffset(5, y)
+		t.Size = UDim2.new(1, -10, 0, height); t.TextColor3 = Theme.UIText
+		t.Font = font; t.TextSize = size; t.Parent = panel
 		return t
 	end
-	return gui, line(3, 23, 14, Enum.Font.GothamBold), line(26, 17, 12, Enum.Font.GothamMedium), line(45, 23, 14, Enum.Font.GothamBold)
+	return gui, line(3, 24, 13, Enum.Font.GothamBold), line(27, 19, 12, Enum.Font.GothamMedium), line(49, 23, 13, Enum.Font.GothamBold)
 end
-
-local function refreshBed(farm: Farm, index: number, now: number)
-	local bed = farm.Beds[index]
-	local unlocked = index <= farm.Unlocked
-	bed.Model:SetAttribute("Unlocked", unlocked)
-	bed.Model:SetAttribute("CropId", bed.CropId or "")
-	bed.Model:SetAttribute("ReadyAt", bed.ReadyAt)
-	bed.Model:SetAttribute("Mature", bed.Mature)
-	bed.Soil.Color = unlocked and Theme.Stone:Lerp(Theme.Iron, 0.35) or Theme.Grass
-	bed.Soil.Material = unlocked and Enum.Material.Slate or Enum.Material.Grass
-	bed.Label.Enabled = unlocked or index == farm.Unlocked + 1
-	bed.Prompt.Enabled = bed.CropId == nil and (unlocked or index == farm.Unlocked + 1)
-	bed.Prompt.ObjectText = "Місце " .. index
-	if bed.CropId then
-		local crop = Crops.ById[bed.CropId]
-		bed.Title.Text = crop.Name
-		bed.Rarity.Text = crop.Rarity
-		bed.Rarity.TextColor3 = crop.Color
-		bed.Status.Text = bed.Mature and ("+" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с") or ("Росте · " .. math.max(0, math.ceil(bed.ReadyAt - now)) .. " с")
-		bed.Status.TextColor3 = bed.Mature and Theme.Harvest or Theme.UISecondary
-		bed.Model:SetAttribute("State", bed.Mature and "Mature" or "Growing")
+local function refreshStand(base: Base, index: number, now: number)
+	local s = base.Stands[index]
+	local unlocked = index <= base.Unlocked
+	s.Model:SetAttribute("Unlocked", unlocked)
+	s.Model:SetAttribute("FindId", s.FindId or "")
+	s.Model:SetAttribute("CharacterId", s.CharacterId or "")
+	s.Model:SetAttribute("ReadyAt", s.ReadyAt)
+	s.Platform.Color = unlocked and Theme.Wood or Theme.Stone:Lerp(Theme.Iron, 0.45)
+	s.Label.Enabled = unlocked or index == base.Unlocked + 1
+	s.Prompt.Enabled = unlocked or index == base.Unlocked + 1
+	s.Prompt.ObjectText = "Підставка " .. index
+	if s.CharacterId then
+		local c = Finds.CharacterById[s.CharacterId]
+		s.Title.Text = c.Name; s.Rarity.Text = c.Rarity; s.Rarity.TextColor3 = c.Color
+		s.Status.Text = "+" .. c.Income .. " мон. / " .. Config.IncomeInterval .. " с"
+		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Персонаж"
+		s.Model:SetAttribute("State", "Occupied")
+	elseif s.FindId then
+		local f = Finds.ById[s.FindId]
+		local ready = now >= s.ReadyAt
+		s.Title.Text = f.Name; s.Rarity.Text = f.Rarity .. " знахідка"; s.Rarity.TextColor3 = f.Color
+		s.Status.Text = ready and "Готово! Відкрий" or ("Розпакування · " .. math.max(0, math.ceil(s.ReadyAt - now)) .. " с")
+		s.Status.TextColor3 = ready and Theme.Harvest or Theme.UISecondary
+		s.Prompt.Enabled = ready; s.Prompt.ActionText = "Відкрити"
+		s.Model:SetAttribute("State", ready and "Ready" or "Sealed")
 	elseif unlocked then
-		bed.Title.Text = "Вільне місце"
-		bed.Rarity.Text = "Для твого об’єкта"
-		bed.Rarity.TextColor3 = Theme.UISecondary
-		bed.Status.Text = "Розмістити"
-		bed.Status.TextColor3 = Theme.Harvest
-		bed.Prompt.ActionText = "Розмістити"
-		bed.Model:SetAttribute("State", "Empty")
+		s.Title.Text = "Вільна підставка"; s.Rarity.Text = "Постав сюди знахідку"
+		s.Rarity.TextColor3 = Theme.UISecondary; s.Status.Text = "Обрати знахідку"
+		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Обрати знахідку"
+		s.Model:SetAttribute("State", "Empty")
 	else
-		bed.Title.Text = "Нове місце"
-		bed.Rarity.Text = "Більше об’єктів на базі"
-		bed.Rarity.TextColor3 = Theme.UISecondary
-		bed.Status.Text = (Config.BedPrices[index] or 0) .. " монет"
-		bed.Status.TextColor3 = Theme.UIText
-		bed.Prompt.ActionText = "Відкрити · " .. (Config.BedPrices[index] or 0) .. " монет"
-		bed.Model:SetAttribute("State", "Locked")
+		s.Title.Text = "Нова підставка"; s.Rarity.Text = "Місце для колекції"
+		s.Rarity.TextColor3 = Theme.UISecondary; s.Status.Text = (Config.StandPrices[index] or 0) .. " монет"
+		s.Status.TextColor3 = Theme.UIText; s.Prompt.ActionText = "Додати · " .. (Config.StandPrices[index] or 0) .. " монет"
+		s.Model:SetAttribute("State", "Locked")
 	end
 end
-
-local function refreshStats(farm: Farm)
-	local player = farm.Owner
-	if not player then return end
-	local growing, mature, income = 0, 0, 0
-	for _, bed in farm.Beds do
-		if bed.CropId then
-			if bed.Mature then mature += 1; income += Crops.ById[bed.CropId].Income else growing += 1 end
+local function refreshStats(base: Base)
+	local p = base.Owner
+	if not p then return end
+	local used, ready, sealed, income, residents = 0, 0, 0, 0, 0
+	local now = Workspace:GetServerTimeNow()
+	for _, s in base.Stands do
+		if s.CharacterId then used += 1; residents += 1; income += Finds.CharacterById[s.CharacterId].Income
+		elseif s.FindId then
+			used += 1
+			if now >= s.ReadyAt then ready += 1 else sealed += 1 end
 		end
 	end
-	farm.Model:SetAttribute("UnlockedBeds", farm.Unlocked)
-	player:SetAttribute("FarmSlots", farm.Unlocked)
-	player:SetAttribute("UsedBeds", growing + mature)
-	player:SetAttribute("GrowingBeds", growing)
-	player:SetAttribute("MatureBeds", mature)
-	player:SetAttribute("Income", income)
-	player:SetAttribute("NextBedCost", Config.BedPrices[farm.Unlocked + 1] or 0)
+	base.Model:SetAttribute("UnlockedStands", base.Unlocked)
+	p:SetAttribute("BaseSlots", base.Unlocked); p:SetAttribute("UsedStands", used)
+	p:SetAttribute("ReadyFinds", ready); p:SetAttribute("SealedFinds", sealed)
+	p:SetAttribute("Residents", residents); p:SetAttribute("Income", income)
+	p:SetAttribute("NextStandCost", Config.StandPrices[base.Unlocked + 1] or 0)
 end
-
-local function onFarm(player: Player, farm: Farm): boolean
-	local character = player.Character
+local function onBase(p: Player, base: Base): boolean
+	local character = p.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not root or not root:IsA("BasePart") or not humanoid or humanoid.Health <= 0 then return false end
-	local relative = root.Position - WorldService.GetPlotPosition(farm.Index)
+	local relative = root.Position - WorldService.GetPlotPosition(base.Index)
 	return math.abs(relative.X) < 48 and math.abs(relative.Z) < 55 and math.abs(relative.Y) < 35
 end
-
-local function unlock(player: Player, farm: Farm): (boolean, string, number?)
-	if farm.Unlocked >= Config.MaxBeds then return false, "Усі місця вже відкриті.", nil end
-	local index = farm.Unlocked + 1
-	local price = Config.BedPrices[index]
-	local coins = player:GetAttribute("Coins") or 0
+local function allowRequest(p: Player): boolean
+	local now = os.clock()
+	if now - (lastRequest[p] or -1) < 0.25 then return false end
+	lastRequest[p] = now
+	return true
+end
+local function unlock(p: Player, base: Base): (boolean, string, number?)
+	if base.Unlocked >= Config.MaxStands then return false, "Усі підставки вже відкриті.", nil end
+	local index = base.Unlocked + 1
+	local price = Config.StandPrices[index]
+	local coins = p:GetAttribute("Coins") or 0
 	if coins < price then return false, "Потрібно ще " .. (price - coins) .. " мон.", nil end
-	player:SetAttribute("Coins", coins - price)
-	farm.Unlocked = index
-	refreshBed(farm, index, Workspace:GetServerTimeNow())
-	if index < Config.MaxBeds then refreshBed(farm, index + 1, Workspace:GetServerTimeNow()) end
-	refreshStats(farm)
-	return true, "Місце відкрито. Тепер можна виростити об’єкт.", index
+	p:SetAttribute("Coins", coins - price); base.Unlocked = index
+	refreshStand(base, index, Workspace:GetServerTimeNow())
+	if index < Config.MaxStands then refreshStand(base, index + 1, Workspace:GetServerTimeNow()) end
+	refreshStats(base)
+	return true, "Нову підставку відкрито!", index
 end
-
-local function plant(player: Player, farm: Farm, index: number, cropId: string): (boolean, string)
-	local bed = farm.Beds[index]
-	local crop = Crops.ById[cropId]
-	if not bed or index > farm.Unlocked then return false, "Спочатку відкрий це місце." end
-	if bed.CropId then return false, "Тут уже росте об’єкт." end
-	if not crop then return false, "Обери об’єкт із каталогу." end
-	local coins = player:GetAttribute("Coins") or 0
-	if coins < crop.Price then return false, "Потрібно ще " .. (crop.Price - coins) .. " мон." end
-	player:SetAttribute("Coins", coins - crop.Price)
-	local now = Workspace:GetServerTimeNow()
-	bed.CropId = cropId
-	bed.ReadyAt = now + crop.GrowSeconds
-	bed.NextIncome = bed.ReadyAt + Config.IncomeInterval
-	bed.Stage = 1
-	bed.Mature = false
-	local model = Assets.Crop(cropId, bed.Position)
-	model:ScaleTo(0.25)
-	model.Parent = bed.Model
-	bed.Crop = model
-	refreshBed(farm, index, now)
-	refreshStats(farm)
-	return true, "Розміщено: " .. crop.Name .. ". Ріст — " .. crop.GrowSeconds .. " с."
+local function place(p: Player, base: Base, index: number, findId: string): (boolean, string)
+	local s, f = base.Stands[index], Finds.ById[findId]
+	if not s or index > base.Unlocked then return false, "Спочатку відкрий підставку." end
+	if s.FindId or s.CharacterId then return false, "Підставка вже зайнята." end
+	if not f then return false, "Обери знахідку з каталогу." end
+	local coins = p:GetAttribute("Coins") or 0
+	if coins < f.Price then return false, "Потрібно ще " .. (f.Price - coins) .. " мон." end
+	p:SetAttribute("Coins", coins - f.Price)
+	s.FindId = findId; s.ReadyAt = Workspace:GetServerTimeNow() + f.OpenSeconds; s.Notified = false
+	local display = CollectionAssets.Container(findId, s.Position)
+	display.Parent = s.Model; s.Display = display
+	refreshStand(base, index, Workspace:GetServerTimeNow()); refreshStats(base)
+	return true, f.Name .. " на підставці. Відкрий через " .. f.OpenSeconds .. " с."
 end
-
-local function decorate(farm: Model, at: Vector3)
-	part(farm, "FarmLawn", Vector3.new(88, 0.5, 100), at + Vector3.new(0, 0.35, 0), Theme.Grass, Enum.Material.Grass, true)
-	part(farm, "GardenPath", Vector3.new(8, 0.16, 91), at + Vector3.new(0, 0.67, 3), Theme.Path, Enum.Material.Ground, true)
+local function open(p: Player, base: Base, index: number): (boolean, string)
+	local s = base.Stands[index]
+	if not s or index > base.Unlocked or not s.FindId then return false, "На підставці немає закритої знахідки." end
+	if Workspace:GetServerTimeNow() < s.ReadyAt then return false, "Знахідка ще розпаковується." end
+	local f = Finds.ById[s.FindId]
+	local roll, total = random:NextInteger(1, 100), 0
+	local id = f.Drops[#f.Drops].Id
+	for _, drop in f.Drops do total += drop.Weight; if roll <= total then id = drop.Id; break end end
+	-- No yielding between consuming the find and assigning its single reward.
+	s.FindId = nil; s.CharacterId = id; s.ReadyAt = 0
+	s.NextIncome = Workspace:GetServerTimeNow() + Config.IncomeInterval
+	if s.Display then s.Display:Destroy() end
+	local display = CollectionAssets.Character(id, s.Position)
+	display.Parent = s.Model; s.Display = display
+	refreshStand(base, index, Workspace:GetServerTimeNow()); refreshStats(base)
+	LevelService.AddXP(p, Config.OpenXP)
+	showCharacter:FireClient(p, id, index, true)
+	return true, "Твій новий персонаж: " .. Finds.CharacterById[id].Name .. "!"
+end
+local function sell(p: Player, base: Base, index: number): (boolean, string)
+	local s = base.Stands[index]
+	if not s or index > base.Unlocked or not s.CharacterId then return false, "На підставці немає персонажа." end
+	local c = Finds.CharacterById[s.CharacterId]
+	s.CharacterId = nil; s.NextIncome = 0
+	if s.Display then s.Display:Destroy() end
+	s.Display = nil
+	p:SetAttribute("Coins", (p:GetAttribute("Coins") or 0) + c.SellPrice)
+	refreshStand(base, index, Workspace:GetServerTimeNow()); refreshStats(base)
+	return true, "Персонажа продано. +" .. c.SellPrice .. " мон. Підставка вільна."
+end
+local function decorate(base: Model, at: Vector3)
+	part(base, "CollectorLawn", Vector3.new(88, 0.5, 100), at + Vector3.new(0, 0.35, 0), Theme.Grass, Enum.Material.Grass, true)
+	local plaza = part(base, "CollectionCourtyard", Vector3.new(0.22, 68, 68), at + Vector3.new(0, 0.72, -1), Theme.Stone:Lerp(Theme.Path, 0.5), Enum.Material.Cobblestone, true)
+	plaza.Shape = Enum.PartType.Cylinder; plaza.CFrame *= CFrame.Angles(0, 0, math.pi / 2)
+	part(base, "EntrancePath", Vector3.new(9, 0.2, 21), at + Vector3.new(0, 0.72, 39), Theme.Path, Enum.Material.Ground, true)
+	local shed = at + Vector3.new(-27, 0.6, -39)
+	part(base, "CollectorWorkshop", Vector3.new(21, 8, 14), shed + Vector3.new(0, 4, 0), Theme.Barn, Enum.Material.WoodPlanks, true)
 	for _, side in {-1, 1} do
-		for z = -48, 48, 12 do
-			part(farm, "FencePost", Vector3.new(0.8, 4, 0.8), at + Vector3.new(side * 43, 2.5, z), Theme.WoodLight, Enum.Material.Wood, true)
-		end
-		for _, y in {1.8, 3.2} do
-			part(farm, "FenceRail", Vector3.new(0.45, 0.5, 96), at + Vector3.new(side * 43, y, 0), Theme.WoodLight, Enum.Material.Wood, true)
-		end
-		for _, z in {-48, 48} do
-			for x = 8, 43, 11.5 do
-				part(farm, "FencePost", Vector3.new(0.8, 4, 0.8), at + Vector3.new(side * x, 2.5, z), Theme.WoodLight, Enum.Material.Wood, true)
-			end
-			for _, y in {1.8, 3.2} do
-				part(farm, "GateFence", Vector3.new(35, 0.5, 0.45), at + Vector3.new(side * 25.5, y, z), Theme.WoodLight, Enum.Material.Wood, true)
-			end
-		end
-	end
-
-	local barn = at + Vector3.new(-28, 0.6, -39)
-	part(farm, "Barn", Vector3.new(19, 8, 15), barn + Vector3.new(0, 4, 0), Theme.Barn, Enum.Material.WoodPlanks, true)
-	for _, side in {-1, 1} do
-		local roof = part(farm, "BarnRoof", Vector3.new(11.7, 0.8, 18), barn + Vector3.new(side * 4.9, 9.2, 0), Theme.Ink, Enum.Material.WoodPlanks, true)
+		local roof = part(base, "WorkshopRoof", Vector3.new(12.5, 0.8, 17), shed + Vector3.new(side * 5.3, 9.2, 0), Theme.Ink, Enum.Material.WoodPlanks, true)
 		roof.CFrame *= CFrame.Angles(0, 0, -side * 0.43)
-		part(farm, "BarnTrim", Vector3.new(0.55, 8, 0.5), barn + Vector3.new(side * 9.1, 4, 7.65), Theme.Paper)
+		part(base, "DoorFrame", Vector3.new(0.5, 7, 0.5), shed + Vector3.new(side * 3.4, 3.7, 7.2), Theme.Panel)
 	end
-	part(farm, "BarnDoor", Vector3.new(6, 6, 0.3), barn + Vector3.new(0, 3, 7.7), Theme.Wood, Enum.Material.WoodPlanks)
+	part(base, "WorkshopDoor", Vector3.new(6.3, 6.8, 0.3), shed + Vector3.new(0, 3.5, 7.1), Theme.Wood, Enum.Material.WoodPlanks)
+	local workshopSign = part(base, "WorkshopSign", Vector3.new(13, 2, 0.3), shed + Vector3.new(0, 8, 7.3), Theme.Iron)
+	Assets.Sign(workshopSign, "Дім знахідок")
+	Assets.Cobweb(base, shed + Vector3.new(-9.8, 7.8, 7.4), 3.4)
+	part(base, "Workbench", Vector3.new(11, 0.65, 4.5), at + Vector3.new(0, 3.2, -27), Theme.WoodLight, Enum.Material.WoodPlanks, true)
+	for _, x in {-4.3, 4.3} do part(base, "TableLeg", Vector3.new(0.7, 2.5, 3.5), at + Vector3.new(x, 1.7, -27), Theme.Wood, Enum.Material.Wood, true) end
+	part(base, "UnfoldedMap", Vector3.new(4, 0.08, 2.7), at + Vector3.new(-1, 3.6, -27), Theme.Paper)
+	for _, x in {2, 3.5} do part(base, "OldBook", Vector3.new(1.3, 0.3, 1.8), at + Vector3.new(x, 3.6, -27), Theme.Barn) end
+	local how = part(base, "HowToBoard", Vector3.new(14, 4, 0.5), at + Vector3.new(23, 5, -36), Theme.Wood, Enum.Material.Wood)
+	Assets.Sign(how, "Твоя колекція", "Знахідка → відкриття → персонаж → монети")
+	for _, x in {17, 29} do part(base, "BoardPost", Vector3.new(0.7, 5, 0.7), at + Vector3.new(x, 2.5, -36), Theme.Wood) end
 	for _, side in {-1, 1} do
-		local brace = part(farm, "DoorBrace", Vector3.new(0.35, 7.8, 0.15), barn + Vector3.new(0, 3, 7.95), Theme.Panel)
-		brace.CFrame *= CFrame.Angles(0, 0, side * 0.73)
-	end
-	part(farm, "BarnWindowTrim", Vector3.new(3, 3, 0.3), barn + Vector3.new(-5.9, 5, 7.7), Theme.Panel)
-	local window = part(farm, "BarnWindow", Vector3.new(2.3, 2.3, 0.35), barn + Vector3.new(-5.9, 5, 7.85), Theme.Harvest, Enum.Material.Glass)
-	local glow = Instance.new("SurfaceLight")
-	glow.Face = Enum.NormalId.Back
-	glow.Color = Color3.fromRGB(255, 184, 99)
-	glow.Brightness = 1.5
-	glow.Range = 20
-	glow.Angle = 130
-	glow.Parent = window
-	Assets.Cobweb(farm, barn + Vector3.new(-8.7, 7.8, 7.9), 3.4)
-	part(farm, "DoorStep", Vector3.new(8, 0.35, 3), barn + Vector3.new(0, 0.15, 9), Theme.Stone, Enum.Material.Cobblestone)
-	Assets.Tree(farm, at + Vector3.new(31, 0.6, -39), 1.25, Theme.Harvest)
-	for _, pos in {Vector3.new(-35, 1.6, 3), Vector3.new(-35, 1.6, 8), Vector3.new(35, 1.6, -12)} do
-		local hay = part(farm, "HayBale", Vector3.new(4, 2.4, 3), at + pos, Theme.Harvest, Enum.Material.Grass)
-		for _, band in {-1, 1} do
-			part(farm, "HayTwine", Vector3.new(0.22, 2.5, 3.1), hay.Position + Vector3.new(band, 0, 0), Theme.Wood)
+		for z = -48, 48, 12 do part(base, "FencePost", Vector3.new(0.8, 4, 0.8), at + Vector3.new(side * 43, 2.5, z), Theme.WoodLight, Enum.Material.Wood, true) end
+		for _, y in {1.8, 3.2} do
+			part(base, "FenceRail", Vector3.new(0.45, 0.5, 96), at + Vector3.new(side * 43, y, 0), Theme.WoodLight, Enum.Material.Wood, true)
+			for _, z in {-48, 48} do part(base, "GateFence", Vector3.new(35, 0.5, 0.45), at + Vector3.new(side * 25.5, y, z), Theme.WoodLight, Enum.Material.Wood, true) end
 		end
 	end
-	Assets.Pumpkins(farm, at + Vector3.new(-37, 0.7, -27))
-	Assets.Pumpkins(farm, at + Vector3.new(12, 0.7, 42))
-	for _, lampPosition in {Vector3.new(-30, 0.7, 34), Vector3.new(30, 0.7, 34), Vector3.new(7, 0.7, 9), Vector3.new(-7, 0.7, -23)} do
-		Assets.PathLantern(farm, at + lampPosition)
-	end
-	part(farm, "MailboxPost", Vector3.new(0.65, 3.2, 0.65), at + Vector3.new(33, 2.1, 38), Theme.Wood, Enum.Material.Wood)
-	part(farm, "Mailbox", Vector3.new(2.5, 1.6, 3), at + Vector3.new(33, 4.1, 38), Theme.Barn, Enum.Material.Metal)
-	local random = Random.new(math.floor(math.abs(at.X) + math.abs(at.Z)))
+	Assets.Tree(base, at + Vector3.new(33, 0.6, -40), 1.15, Theme.Harvest)
+	Assets.Pumpkins(base, at + Vector3.new(-37, 0.7, -27)); Assets.Pumpkins(base, at + Vector3.new(12, 0.7, 42))
+	for _, pos in {Vector3.new(-30, 0.7, 34), Vector3.new(30, 0.7, 34), Vector3.new(-7, 0.7, -24), Vector3.new(7, 0.7, -24)} do Assets.PathLantern(base, at + pos) end
+	local leaves = Random.new(math.floor(math.abs(at.X) + math.abs(at.Z)))
 	for _ = 1, 35 do
-		local x = random:NextNumber(-39, 39)
-		local z = random:NextNumber(-45, 45)
-		local leaf = part(farm, "FallenLeaf", Vector3.new(0.7, 0.04, 1.2), at + Vector3.new(x, 0.67, z), random:NextNumber() > 0.5 and Theme.Rust or Theme.Harvest)
-		leaf.CFrame *= CFrame.Angles(0, random:NextNumber(0, math.pi), 0)
+		local leaf = part(base, "FallenLeaf", Vector3.new(0.7, 0.04, 1.2), at + Vector3.new(leaves:NextNumber(-39, 39), 0.9, leaves:NextNumber(-45, 45)), leaves:NextNumber() > 0.5 and Theme.Rust or Theme.Harvest)
+		leaf.CFrame *= CFrame.Angles(0, leaves:NextNumber(0, math.pi), 0)
 	end
 end
-
-local function createFarm(index: number, root: Folder): Farm
+local function createBase(index: number, root: Folder): Base
 	local at = WorldService.GetPlotPosition(index)
 	local model = Instance.new("Model")
-	model.Name = "Farm_" .. index
-	model:SetAttribute("OwnerUserId", 0)
-	model.Parent = root
+	model.Name = "Base_" .. index; model:SetAttribute("OwnerUserId", 0); model.Parent = root
 	decorate(model, at)
-	local ownerBoard = part(model, "FarmName", Vector3.new(12, 2.6, 0.5), at + Vector3.new(-24, 4.3, 42), Theme.Wood, Enum.Material.Wood)
-	local ownerText = Assets.Sign(ownerBoard, "Вільна база")
-	local farm: Farm = { Index = index, Model = model, Owner = nil, Unlocked = Config.StartingBeds, Beds = {}, Sign = ownerText }
-	local bedsFolder = Instance.new("Folder")
-	bedsFolder.Name = "Beds"
-	bedsFolder.Parent = model
-	for bedIndex = 1, Config.MaxBeds do
-		local side = bedIndex % 2 == 1 and -1 or 1
-		local row = math.ceil(bedIndex / 2)
-		local pos = at + Vector3.new(side * 18, 0.85, 24 - (row - 1) * 16)
-		local bedModel = Instance.new("Model")
-		bedModel.Name = "Bed_" .. bedIndex
-		bedModel:SetAttribute("BedIndex", bedIndex)
-		bedModel.Parent = bedsFolder
-		local soil = part(bedModel, "Soil", Vector3.new(20, 0.35, 12), pos, Theme.Soil, Enum.Material.Ground)
-		for _, edge in {-1, 1} do
-			part(bedModel, "BedPlank", Vector3.new(20.5, 0.65, 0.45), pos + Vector3.new(0, 0.05, edge * 6), Theme.Wood, Enum.Material.WoodPlanks)
-			part(bedModel, "BedPlank", Vector3.new(0.45, 0.65, 12.4), pos + Vector3.new(edge * 10, 0.05, 0), Theme.Wood, Enum.Material.WoodPlanks)
+	local board = part(model, "BaseName", Vector3.new(14, 2.6, 0.5), at + Vector3.new(-24, 4.3, 42), Theme.Wood, Enum.Material.Wood)
+	local base: Base = { Index = index, Model = model, Owner = nil, Unlocked = Config.StartingStands, Stands = {}, Sign = Assets.Sign(board, "Вільна база") }
+	local folder = Instance.new("Folder")
+	folder.Name = "Stands"; folder.Parent = model
+	-- Curved display arrangement, not rectangular planting beds.
+	local positions = { Vector3.new(-14, 0, 22), Vector3.new(14, 0, 22), Vector3.new(-24, 0, 9), Vector3.new(24, 0, 9), Vector3.new(-25, 0, -7), Vector3.new(25, 0, -7), Vector3.new(-14, 0, -19), Vector3.new(14, 0, -19) }
+	for standIndex, offset in positions do
+		local pos = at + offset + Vector3.new(0, 1, 0)
+		local m = Instance.new("Model")
+		m.Name = "Stand_" .. standIndex; m:SetAttribute("StandIndex", standIndex); m.Parent = folder
+		for tier = 1, 2 do
+			local disc = part(m, "StonePlinth", Vector3.new(0.6, 10 - tier, 10 - tier), pos + Vector3.new(0, (tier - 1) * 0.6, 0), Theme.Stone, Enum.Material.Slate, true)
+			disc.Shape = Enum.PartType.Cylinder; disc.CFrame *= CFrame.Angles(0, 0, math.pi / 2)
 		end
-		local anchor = part(bedModel, "PlantStake", Vector3.new(0.4, 2.8, 0.4), pos + Vector3.new(-side * 8, 1.2, 4.7), Theme.WoodLight, Enum.Material.Wood)
+		local platform = part(m, "DisplayTop", Vector3.new(0.25, 7.7, 7.7), pos + Vector3.new(0, 1.03, 0), Theme.Wood, Enum.Material.WoodPlanks, true)
+		platform.Shape = Enum.PartType.Cylinder; platform.CFrame *= CFrame.Angles(0, 0, math.pi / 2)
+		local anchor = part(m, "PlaquePost", Vector3.new(0.4, 2.7, 0.4), pos + Vector3.new(0, 1, 5.2), Theme.WoodLight, Enum.Material.Wood)
 		local prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "BedPrompt"
-		prompt.MaxActivationDistance = 12
-		prompt.RequiresLineOfSight = false
-		prompt.HoldDuration = 0
-		prompt.Parent = anchor
-		local labelGui, title, rarity, status = bedLabel(anchor)
-		farm.Beds[bedIndex] = { Model = bedModel, Soil = soil, Prompt = prompt, Label = labelGui, Title = title, Rarity = rarity, Status = status, Position = pos + Vector3.new(0, 0.2, 0), CropId = nil, Crop = nil, ReadyAt = 0, NextIncome = 0, Stage = 0, Mature = false }
-		prompt.Triggered:Connect(function(player)
-			if player ~= farm.Owner or not onFarm(player, farm) then return end
-			if bedIndex <= farm.Unlocked and farm.Beds[bedIndex].CropId == nil then
-				openMenu:FireClient(player, bedIndex)
-			elseif bedIndex == farm.Unlocked + 1 then
-				local ok, message = unlock(player, farm)
-				feedback:FireClient(player, message, ok)
+		prompt.Name = "StandPrompt"; prompt.MaxActivationDistance = 12; prompt.RequiresLineOfSight = false; prompt.HoldDuration = 0; prompt.Parent = anchor
+		local gui, title, rarity, status = plaque(anchor)
+		base.Stands[standIndex] = { Model = m, Platform = platform, Prompt = prompt, Label = gui, Title = title, Rarity = rarity, Status = status, Position = pos + Vector3.new(0, 1.2, 0), FindId = nil, CharacterId = nil, Display = nil, ReadyAt = 0, NextIncome = 0, Notified = false }
+		prompt.Triggered:Connect(function(p)
+			if p ~= base.Owner or not onBase(p, base) then return end
+			local rootPart = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+			if not rootPart or not rootPart:IsA("BasePart") or (rootPart.Position - anchor.Position).Magnitude > 14 then return end
+			local s = base.Stands[standIndex]
+			if standIndex > base.Unlocked + 1 then return end
+			if s.CharacterId then showCharacter:FireClient(p, s.CharacterId, standIndex, false)
+			elseif standIndex <= base.Unlocked and not s.FindId then openMenu:FireClient(p, standIndex)
+			elseif allowRequest(p) then
+				local ok, message
+				if standIndex == base.Unlocked + 1 then ok, message = unlock(p, base) else ok, message = open(p, base, standIndex) end
+				if not ok or not s.CharacterId then feedback:FireClient(p, message, ok) end
 			end
 		end)
-		refreshBed(farm, bedIndex, 0)
+		refreshStand(base, standIndex, 0)
 	end
-	return farm
+	return base
 end
-
-local function moveHome(player: Player, character: Model)
+local function moveHome(p: Player, character: Model)
 	local root = character:WaitForChild("HumanoidRootPart", 10)
-	local farm = playerFarms[player]
-	if root and farm and player.Character == character then
-		local at = WorldService.GetPlotPosition(farm.Index)
+	local base = playerBases[p]
+	if root and base and p.Character == character then
+		local at = WorldService.GetPlotPosition(base.Index)
 		character:PivotTo(CFrame.lookAt(at + Vector3.new(0, 4, 38), at + Vector3.new(0, 3, -5)))
 	end
 end
-
-local function assign(player: Player)
-	if playerFarms[player] then return end
-	for _, farm in farms do
-		if not farm.Owner then
-			farm.Owner = player
-			playerFarms[player] = farm
-			farm.Model:SetAttribute("OwnerUserId", player.UserId)
-			farm.Sign.Text = "База " .. player.DisplayName
-			player:SetAttribute("FarmIndex", farm.Index)
-			player:SetAttribute("Coins", Config.StartingCoins)
-			refreshStats(farm)
-			player.CharacterAdded:Connect(function(character) task.defer(moveHome, player, character) end)
-			if player.Character then task.defer(moveHome, player, player.Character) end
-			return
-		end
+local function assign(p: Player)
+	if playerBases[p] then return end
+	for _, base in bases do
+		if base.Owner then continue end
+		base.Owner = p; playerBases[p] = base; base.Model:SetAttribute("OwnerUserId", p.UserId)
+		base.Sign.Text = "Колекція " .. p.DisplayName
+		p:SetAttribute("BaseIndex", base.Index); p:SetAttribute("Coins", Config.StartingCoins)
+		refreshStats(base)
+		p.CharacterAdded:Connect(function(character) task.defer(moveHome, p, character) end)
+		if p.Character then task.defer(moveHome, p, p.Character) end
+		return
 	end
-	warn("No free farm for " .. player.Name)
+	warn("No free base for " .. p.Name)
 end
-
-local function release(player: Player)
-	lastRequest[player] = nil
-	local farm = playerFarms[player]
-	if not farm then return end
-	playerFarms[player] = nil
-	farm.Owner = nil
-	farm.Unlocked = Config.StartingBeds
-	farm.Model:SetAttribute("OwnerUserId", 0)
-	farm.Model:SetAttribute("UnlockedBeds", Config.StartingBeds)
-	farm.Sign.Text = "Вільна база"
-	for index, bed in farm.Beds do
-		if bed.Crop then bed.Crop:Destroy() end
-		bed.Crop, bed.CropId = nil, nil
-		bed.ReadyAt, bed.NextIncome, bed.Stage, bed.Mature = 0, 0, 0, false
-		refreshBed(farm, index, 0)
+local function release(p: Player)
+	lastRequest[p] = nil
+	local base = playerBases[p]
+	if not base then return end
+	playerBases[p] = nil; base.Owner = nil; base.Unlocked = Config.StartingStands
+	base.Model:SetAttribute("OwnerUserId", 0); base.Model:SetAttribute("UnlockedStands", Config.StartingStands)
+	base.Sign.Text = "Вільна база"
+	for index, s in base.Stands do
+		if s.Display then s.Display:Destroy() end
+		s.Display, s.FindId, s.CharacterId = nil, nil, nil
+		s.ReadyAt, s.NextIncome, s.Notified = 0, 0, false
+		refreshStand(base, index, 0)
 	end
 end
-
 function PlotService.Init()
-	for _, name in {"PlayerPlots", "PlayerFarms", "FarmRemotes"} do
-		local parent = name == "FarmRemotes" and ReplicatedStorage or Workspace
-		local previous = parent:FindFirstChild(name)
-		if previous then previous:Destroy() end
-	end
+	for _, name in {"PlayerPlots", "PlayerFarms", "PlayerBases"} do local old = Workspace:FindFirstChild(name); if old then old:Destroy() end end
+	for _, name in {"FarmRemotes", "CollectionRemotes"} do local old = ReplicatedStorage:FindFirstChild(name); if old then old:Destroy() end end
 	local remotes = Instance.new("Folder")
-	remotes.Name = "FarmRemotes"
-	remotes.Parent = ReplicatedStorage
-	openMenu.Name = "OpenPlantMenu"
-	openMenu.Parent = remotes
-	feedback.Name = "Feedback"
-	feedback.Parent = remotes
+	remotes.Name = "CollectionRemotes"; remotes.Parent = ReplicatedStorage
+	openMenu.Name = "OpenCatalogue"; openMenu.Parent = remotes
+	feedback.Name = "Feedback"; feedback.Parent = remotes
+	showCharacter.Name = "ShowCharacter"; showCharacter.Parent = remotes
 	local request = Instance.new("RemoteFunction")
-	request.Name = "Request"
-	request.Parent = remotes
-	request.OnServerInvoke = function(player: Player, action: any, index: any, cropId: any)
-		local farm = playerFarms[player]
-		if not farm or not onFarm(player, farm) then return { ok = false, message = "Повернися на свою базу." } end
-		local now = os.clock()
-		if now - (lastRequest[player] or -1) < 0.25 then return { ok = false, message = "Зачекай мить." } end
-		lastRequest[player] = now
-		if action == "Plant" and typeof(index) == "number" and index == math.floor(index) and index >= 1 and index <= Config.MaxBeds and typeof(cropId) == "string" then
-			local ok, message = plant(player, farm, index, cropId)
-			return { ok = ok, message = message }
-		elseif action == "Unlock" then
-			local ok, message, bedIndex = unlock(player, farm)
-			return { ok = ok, message = message, bedIndex = bedIndex }
-		end
-		return { ok = false, message = "Обери дію в каталозі." }
+	request.Name = "Request"; request.Parent = remotes
+	request.OnServerInvoke = function(p: Player, action: any, index: any, findId: any)
+		local base = playerBases[p]
+		if not base or not onBase(p, base) then return { ok = false, message = "Повернися на свою базу." } end
+		if not allowRequest(p) then return { ok = false, message = "Зачекай мить." } end
+		if action == "Unlock" then local ok, message, standIndex = unlock(p, base); return { ok = ok, message = message, standIndex = standIndex } end
+		if typeof(index) ~= "number" or index ~= index or index < 1 or index > Config.MaxStands or index ~= math.floor(index) then return { ok = false, message = "Обери підставку на своїй базі." } end
+		local ok, message = false, "Обери дію в каталозі."
+		if action == "Place" and typeof(findId) == "string" then ok, message = place(p, base, index, findId)
+		elseif action == "Open" then ok, message = open(p, base, index)
+		elseif action == "Sell" then ok, message = sell(p, base, index) end
+		return { ok = ok, message = message }
 	end
 	local root = Instance.new("Folder")
-	root.Name = "PlayerFarms"
-	root.Parent = Workspace
-	for index = 1, Config.PlotCount do farms[index] = createFarm(index, root) end
-	Players.PlayerAdded:Connect(assign)
-	Players.PlayerRemoving:Connect(release)
-	for _, player in Players:GetPlayers() do assign(player) end
+	root.Name = "PlayerBases"; root.Parent = Workspace
+	for index = 1, Config.PlotCount do bases[index] = createBase(index, root) end
+	Players.PlayerAdded:Connect(assign); Players.PlayerRemoving:Connect(release)
+	for _, p in Players:GetPlayers() do assign(p) end
 	task.spawn(function()
 		while true do
 			task.wait(1)
 			local now = Workspace:GetServerTimeNow()
-			for _, farm in farms do
-				local owner = farm.Owner
+			for _, base in bases do
+				local owner = base.Owner
 				if not owner then continue end
-				local earned = 0
-				local changed = false
-				for index, bed in farm.Beds do
-					if not bed.CropId then continue end
-					local crop = Crops.ById[bed.CropId]
-					if not bed.Mature then
-						local remaining = bed.ReadyAt - now
-						local stage = remaining <= 0 and 3 or (remaining < crop.GrowSeconds / 2 and 2 or 1)
-						if stage ~= bed.Stage and bed.Crop then
-							bed.Stage = stage
-							bed.Crop:ScaleTo(stage == 3 and 1 or 0.6)
-						end
-						if remaining <= 0 then
-							bed.Mature = true
-							changed = true
-							LevelService.AddXP(owner, Config.GrowXP)
-							feedback:FireClient(owner, "Готово: " .. crop.Name .. ". +" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с.", true)
-						end
-						refreshBed(farm, index, now)
-					end
-					if bed.Mature and now >= bed.NextIncome then
-						local periods = math.floor((now - bed.NextIncome) / Config.IncomeInterval) + 1
-						earned += crop.Income * periods
-						bed.NextIncome += Config.IncomeInterval * periods
+				local earned, changed = 0, false
+				for index, s in base.Stands do
+					if s.FindId then
+						refreshStand(base, index, now)
+						if now >= s.ReadyAt and not s.Notified then s.Notified = true; changed = true; feedback:FireClient(owner, "Знахідка готова! Натисни «Відкрити» на підставці.", true) end
+					elseif s.CharacterId and now >= s.NextIncome then
+						local periods = math.floor((now - s.NextIncome) / Config.IncomeInterval) + 1
+						earned += Finds.CharacterById[s.CharacterId].Income * periods
+						s.NextIncome += Config.IncomeInterval * periods
 					end
 				end
 				if earned > 0 then owner:SetAttribute("Coins", (owner:GetAttribute("Coins") or 0) + earned) end
-				if changed then refreshStats(farm) end
+				if changed then refreshStats(base) end
 			end
 		end
 	end)
 end
-
 return PlotService

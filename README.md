@@ -19,30 +19,41 @@ Roblox tycoon + survival + extraction game.
 
 ## Current playable base
 
-Start a Play test after connecting Rojo. Each player receives a Halloween clearing
-with two open spaces and 40 coins. Use **Розмістити**, or approach an empty space,
-to open the catalogue. Place a unique living object, let it grow through three
-visible stages, and receive coins automatically every five seconds after maturity.
-This is a base for growing unusual objects, not a vegetable farm.
+Start a Play test after connecting Rojo. Each player receives a collector's
+Halloween courtyard, two circular display stands and 40 earned coins. Open
+**Знахідки**, or approach an empty stand. Place a sealed find, wait for unpacking,
+then explicitly choose **Відкрити** on its stand or the HUD. One random character
+replaces the container and generates coins automatically every five seconds.
+Containers stay full-sized: nothing grows in planting beds.
 
-| Object | Rarity | Price | Growth | Mature income |
-| --- | --- | ---: | ---: | ---: |
-| Mimic chest | Common | 15 | 10 s | 3 coins / 5 s |
-| Wandering lantern | Rare | 75 | 18 s | 12 coins / 5 s |
-| Midnight clock | Epic | 240 | 30 s | 42 coins / 5 s |
+| Find | Rarity | Coins | Unpacking | Character pool (coins / 5 s) |
+| --- | --- | ---: | ---: | --- |
+| Забута валіза — canvas station bag | Common | 15 | 8 s | Ґудзик 70% (+3), Шкарпетик 30% (+5) |
+| Клітка шепотів — domed birdcage | Rare | 75 | 15 s | Ліхтар-блукач 65% (+13), Ворон-вартовий 35% (+18) |
+| Кокон сутінків — bound silk cocoon | Epic | 240 | 25 s | Сутінковий метелик 60% (+44), Хранитель опівночі 40% (+60) |
+| Місячна печать — crescent reliquary | Legendary | 650 | 40 s | Місячний кіт 75% (+130), Гарбузовий король 25% (+180) |
 
-Rarity belongs to the object type; purchases do not roll random rewards. Open up
-to eight spaces through the catalogue or the next locked space. Expansion prices
-are 50, 100, 180, 300, 480 and 750 coins. Reaching maturity gives 10 XP.
+The catalogue shows exact odds and income from the same shared table used by the
+server. There are no Robux purchases, paid keys, roulette near-misses or premium
+luck mechanics. Earned-coin supplies are the current test source of finds; train
+expedition recovery is not implemented yet.
 
-Purchases, growth, payouts and farm ownership are server-authoritative. The server
-checks funds, space availability and that the player is on their own base. The
-catalogue uses the same 3D object models as the world and adapts to narrow screens.
+Expand to eight stands for 50, 100, 180, 300, 480 and 750 coins. Opening grants
+10 XP. Approach a resident to inspect its 3D portrait and income. Selling requires
+a second confirmation, frees its stand, and grants the displayed fixed resale
+value. This allows upgrading a full base rather than becoming stuck with commons.
 
-Wooden fences, stone growth pads, fallen leaves and rusty foliage frame a moonlit
-night. Candle lanterns, warm windows, decorative jack-o'-lanterns and cobwebs give
-the clearing a Halloween theme. The dusk-coloured HUD uses cream text and amber
-accents. Pumpkins are scenery, not income-generating objects.
+Placement, timers, random rolls, XP, sale and income are server-authoritative.
+Requests validate ownership, location, balance, slot bounds/state and rate limit.
+Repeat/early opens and occupied placement are rejected without another charge or
+reward. No yielding occurs while a find is consumed and its single drop assigned.
+
+Circular stone-and-wood plinths follow the edge of a cobbled courtyard around a
+clear walking area. A collector's workshop, map-covered workbench, instruction
+board, fallen leaves, carved pumpkins, cobwebs and candle lanterns replace the old
+farm beds and hay. The interface retains dark plum, cream and burnt-orange tones,
+with actual 3D container previews, transparent drop pools and a focused character
+reveal. Catalogue, reveal and touch targets adapt to narrow and landscape screens.
 
 Geometry is generated at runtime so the base stays in Git. Progress currently
 resets between sessions; saving and train expeditions are later milestones.
