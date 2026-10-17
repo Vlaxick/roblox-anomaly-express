@@ -61,6 +61,52 @@ local function label(anchor: BasePart, width: number, offset: Vector3, maxDistan
 	return text
 end
 
+local function zoneSign(plot: Model, name: string, at: Vector3, width: number, accent: Color3, title: string, detail: string): TextLabel
+	local board = part(plot, name, Vector3.new(width, 2.8, 0.55), at, Theme.Ink, Enum.Material.Metal, false)
+	part(plot, name .. "Accent", Vector3.new(width, 0.22, 0.62), at + Vector3.new(0, 1.4, 0), accent, Enum.Material.Neon, false)
+	local surface = Instance.new("SurfaceGui")
+	surface.Name = "ReadableSign"
+	surface.Face = Enum.NormalId.Back
+	surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+	surface.PixelsPerStud = 35
+	surface.LightInfluence = 0
+	surface.Parent = board
+	local heading = Instance.new("TextLabel")
+	heading.Name = "Heading"
+	heading.BackgroundTransparency = 1
+	heading.Position = UDim2.fromScale(0.045, 0.08)
+	heading.Size = UDim2.fromScale(0.91, 0.43)
+	heading.Font = Enum.Font.GothamBlack
+	heading.Text = title
+	heading.TextScaled = true
+	heading.TextXAlignment = Enum.TextXAlignment.Left
+	heading.TextColor3 = Theme.Paper
+	heading.Parent = surface
+	local subtitle = Instance.new("TextLabel")
+	subtitle.Name = "Detail"
+	subtitle.BackgroundTransparency = 1
+	subtitle.Position = UDim2.fromScale(0.045, 0.55)
+	subtitle.Size = UDim2.fromScale(0.91, 0.3)
+	subtitle.Font = Enum.Font.GothamMedium
+	subtitle.Text = detail
+	subtitle.TextScaled = true
+	subtitle.TextXAlignment = Enum.TextXAlignment.Left
+	subtitle.TextColor3 = Theme.Muted
+	subtitle.Parent = surface
+	return subtitle
+end
+
+local function energyConduit(plot: Model, name: string, from: Vector3, to: Vector3, color: Color3)
+	local direction = to - from
+	local distance = direction.Magnitude
+	local segments = math.floor(distance / 3)
+	for segment = 1, segments do
+		local center = from + direction * ((segment - 0.5) / segments)
+		local strip = part(plot, name, Vector3.new(0.36, 0.08, distance / segments - 0.7), center, color, Enum.Material.Neon, false)
+		strip.CFrame = CFrame.lookAt(center, to)
+	end
+end
+
 local function plant(parent: Instance, at: Vector3, scale: number)
 	local stem = part(parent, "AnomalyStem", Vector3.new(0.8, 4, 0.8) * scale, at + Vector3.new(0, 2.1 * scale, 0), Theme.Moss, Enum.Material.Grass, false)
 	stem.Shape = Enum.PartType.Cylinder
@@ -81,7 +127,7 @@ local function limit(index: number): number
 end
 
 local function refreshEnergy(index: number)
-	meters[index].Text = string.format("ЗАРЯД  %d / %d", stored[index], limit(index))
+	meters[index].Text = string.format("%d / %d · ПІДІЙДИ Й ЗАБЕРИ", stored[index], limit(index))
 	local owner = owners[index]
 	if owner then
 		owner:SetAttribute("StoredEnergy", stored[index])
@@ -92,8 +138,8 @@ end
 local function refreshUpgrades(index: number)
 	local reactorOn = production[index]
 	local storageOn = storage[index]
-	upgradeLabels[index].Production.Text = reactorOn and "РЕАКТОР · x2 АКТИВНО" or ("РЕАКТОР · " .. Config.ProductionUpgradeCost .. " ЕН.")
-	upgradeLabels[index].Storage.Text = storageOn and "СХОВИЩЕ · x2 АКТИВНО" or ("СХОВИЩЕ · " .. Config.StorageUpgradeCost .. " ЕН.")
+	upgradeLabels[index].Production.Text = reactorOn and "АКТИВНО · ВИРОБНИЦТВО ×2" or (Config.ProductionUpgradeCost .. " ЕН. → ВИРОБНИЦТВО ×2")
+	upgradeLabels[index].Storage.Text = storageOn and "АКТИВНО · ЛІМІТ 200" or (Config.StorageUpgradeCost .. " ЕН. → ЛІМІТ 200")
 	upgradeLights[index].Production.Color = reactorOn and Theme.Mint or Theme.Amber
 	upgradeLights[index].Storage.Color = storageOn and Theme.Mint or Theme.Amber
 	upgradePrompts[index].Production.Enabled = not reactorOn
@@ -130,7 +176,7 @@ local function console(plot: Model, at: Vector3, kind: string, index: number, ti
 	part(plot, kind .. "Pedestal", Vector3.new(7, 2, 5), at + Vector3.new(0, 2, 0), Theme.Steel, Enum.Material.Metal)
 	local light = part(plot, kind .. "Indicator", Vector3.new(5.5, 0.24, 0.4), at + Vector3.new(0, 3.12, -2.3), Theme.Amber, Enum.Material.Neon, false)
 	upgradeLights[index][kind] = light
-	upgradeLabels[index][kind] = label(light, 150, Vector3.new(0, 2.2, 0), 24)
+	upgradeLabels[index][kind] = zoneSign(plot, kind .. "Sign", at + Vector3.new(0, 9.5, -3.8), 16, Theme.Amber, title, "")
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.ActionText = "Покращити за " .. cost .. " енергії"
 	prompt.ObjectText = title
@@ -153,7 +199,7 @@ local function createPlot(index: number, root: Folder)
 	upgradeLabels[index], upgradePrompts[index], upgradeLights[index] = {}, {}, {}
 
 	part(plot, "Foundation", Vector3.new(80, 1.5, 76), at + Vector3.new(0, 0.8, 0), Theme.Ink, Enum.Material.Metal)
-	part(plot, "MainDeck", Vector3.new(75, 0.25, 71), at + Vector3.new(0, 1.7, 0), Theme.Steel, Enum.Material.Concrete)
+	part(plot, "MainDeck", Vector3.new(75, 0.25, 71), at + Vector3.new(0, 1.7, 0), Theme.Slate, Enum.Material.Concrete)
 	for _, x in {-38.5, 38.5} do
 		part(plot, "DeckEdge", Vector3.new(0.6, 0.22, 74), at + Vector3.new(x, 1.97, 0), Theme.Mint, Enum.Material.Neon, false)
 	end
@@ -161,10 +207,10 @@ local function createPlot(index: number, root: Folder)
 		part(plot, "DeckEdge", Vector3.new(77, 0.22, 0.6), at + Vector3.new(0, 1.97, z), Theme.Mint, Enum.Material.Neon, false)
 	end
 	for x = -30, 30, 15 do
-		part(plot, "FloorGrid", Vector3.new(0.2, 0.05, 68), at + Vector3.new(x, 1.85, 0), Theme.Slate, Enum.Material.Metal, false)
+		part(plot, "FloorGrid", Vector3.new(0.2, 0.05, 68), at + Vector3.new(x, 1.85, 0), Theme.Steel, Enum.Material.Metal, false)
 	end
 	for z = -30, 30, 15 do
-		part(plot, "FloorGrid", Vector3.new(72, 0.05, 0.2), at + Vector3.new(0, 1.85, z), Theme.Slate, Enum.Material.Metal, false)
+		part(plot, "FloorGrid", Vector3.new(72, 0.05, 0.2), at + Vector3.new(0, 1.85, z), Theme.Steel, Enum.Material.Metal, false)
 	end
 
 	-- Open lab pavilion, visible from the player's spawn point.
@@ -195,12 +241,16 @@ local function createPlot(index: number, root: Folder)
 	plant(plot, at + Vector3.new(10, 2.45, -15), 1.15)
 	plant(plot, at + Vector3.new(20, 2.45, -18), 0.75)
 	plant(plot, at + Vector3.new(20, 2.45, -8), 0.9)
+	zoneSign(plot, "GreenhouseSign", at + Vector3.new(16, 12.4, 0), 18, Theme.Mint, "01  ОКОЦВІТ", "АВТО: +5 ЕН. / 5 СЕК")
+	zoneSign(plot, "WorkshopSign", at + Vector3.new(-20, 12.4, 0), 18, Theme.Slate, "МАЙСТЕРНЯ", "ДОСЛІДЖЕННЯ · СКОРО")
+	energyConduit(plot, "GreenhouseEnergyConduit", at + Vector3.new(16, 1.96, 1), at + Vector3.new(4.5, 1.96, 10), Theme.Mint)
 
 	part(plot, "CollectorPlinth", Vector3.new(11, 0.65, 11), at + Vector3.new(0, 2.1, 11), Theme.Ink, Enum.Material.Metal)
 	local collector = part(plot, "EnergyCollector", Vector3.new(5, 5.5, 5), at + Vector3.new(0, 5.15, 11), Theme.Mint, Enum.Material.Glass)
 	collector.Transparency = 0.25
 	part(plot, "CollectorCore", Vector3.new(2.5, 2.5, 2.5), at + Vector3.new(0, 5.2, 11), Theme.Mint, Enum.Material.Neon, false).Shape = Enum.PartType.Ball
-	meters[index] = label(collector, 200, Vector3.new(0, 5, 0))
+	meters[index] = zoneSign(plot, "CollectorSign", at + Vector3.new(0, 14.2, 10.5), 16, Theme.Mint, "02  ЗБЕРИ ЗАРЯД", "")
+	energyConduit(plot, "CollectorGuide", at + Vector3.new(0, 1.96, 27), at + Vector3.new(0, 1.96, 17), Theme.Mint)
 	local collect = Instance.new("ProximityPrompt")
 	collect.ActionText = "Зібрати заряд"
 	collect.ObjectText = "Колектор бази"
@@ -217,6 +267,7 @@ local function createPlot(index: number, root: Folder)
 		end
 		stored[index] = 0
 		player:SetAttribute("Energy", (player:GetAttribute("Energy") or 0) + amount)
+		player:SetAttribute("CollectedOnce", true)
 		player:SetAttribute("BaseNotice", "+" .. amount .. " енергії · +" .. Config.EyeFlowerCollectionXP .. " XP")
 		refreshEnergy(index)
 		LevelService.AddXP(player, Config.EyeFlowerCollectionXP)
@@ -268,7 +319,8 @@ local function assign(player: Player)
 	owners[free], slots[player], stored[free] = player, free, 0
 	player:SetAttribute("PlotIndex", free)
 	player:SetAttribute("Energy", 0)
-	player:SetAttribute("BaseNotice", "Лабораторія готова. Збирай заряд у колекторі.")
+	player:SetAttribute("CollectedOnce", false)
+	player:SetAttribute("BaseNotice", "Твоя база готова. Почни з колектора по центру.")
 	signs[free].Text = string.format("СЕКТОР %02d · %s", free, player.DisplayName)
 	refreshUpgrades(free)
 	refreshEnergy(free)

@@ -25,6 +25,13 @@ EyeFlower greenhouse, energy collector, reactor, and specimen storage. The flowe
 produces 5 energy every 5 seconds, up to 100 in the collector. Collect it with the
 proximity prompt to move it to your wallet and gain XP.
 
+The base now introduces its loop in three visible steps: collect the first charge,
+upgrade the reactor, then expand storage. Physical signs name each zone and explain
+its benefit, while a mint conduit on the floor connects the greenhouse to the
+collector. The current objective stays in the HUD on desktop and phones; its target
+is outlined only for the plot owner. The workshop is labeled as a future feature
+so it does not look like a usable machine. Brief notices disappear automatically.
+
 Spend 80 energy on the reactor to double production, or 150 energy on storage to
 double collector capacity. These upgrades are server-authoritative but currently
 reset between sessions; data saving is a later milestone. The station and parked
