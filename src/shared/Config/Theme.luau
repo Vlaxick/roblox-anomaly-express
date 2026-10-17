@@ -1,6 +1,6 @@
 --!strict
 
--- Warm materials shared by the farm, the village and the seed catalogue.
+-- Moonlit autumn outdoors, candlelight indoors and a readable dusk-coloured UI.
 return table.freeze({
 	Ink = Color3.fromRGB(61, 45, 35),
 	Paper = Color3.fromRGB(255, 241, 210),
@@ -9,14 +9,24 @@ return table.freeze({
 	Wood = Color3.fromRGB(139, 96, 57),
 	WoodLight = Color3.fromRGB(179, 137, 83),
 	Soil = Color3.fromRGB(100, 66, 44),
-	Path = Color3.fromRGB(196, 172, 126),
-	Ground = Color3.fromRGB(146, 143, 87),
-	Grass = Color3.fromRGB(159, 151, 90),
-	Moss = Color3.fromRGB(115, 119, 68),
+	Path = Color3.fromRGB(145, 126, 97),
+	Ground = Color3.fromRGB(89, 83, 62),
+	Grass = Color3.fromRGB(101, 88, 61),
+	Moss = Color3.fromRGB(75, 77, 51),
 	Green = Color3.fromRGB(70, 103, 55),
-	Pumpkin = Color3.fromRGB(199, 107, 48),
-	Harvest = Color3.fromRGB(231, 181, 83),
-	Rust = Color3.fromRGB(173, 79, 40),
-	Barn = Color3.fromRGB(156, 73, 57),
+	Pumpkin = Color3.fromRGB(184, 91, 38),
+	Harvest = Color3.fromRGB(221, 158, 70),
+	Rust = Color3.fromRGB(145, 65, 40),
+	Barn = Color3.fromRGB(122, 57, 51),
 	Stone = Color3.fromRGB(124, 116, 99),
+	Iron = Color3.fromRGB(49, 45, 52),
+	Ghost = Color3.fromRGB(190, 201, 197),
+	Night = Color3.fromRGB(25, 23, 33),
+	UIBackground = Color3.fromRGB(39, 32, 43),
+	UISurface = Color3.fromRGB(57, 45, 57),
+	UIText = Color3.fromRGB(245, 228, 196),
+	UISecondary = Color3.fromRGB(193, 174, 154),
+	UIBorder = Color3.fromRGB(132, 97, 68),
+	Action = Color3.fromRGB(148, 80, 38),
+	Error = Color3.fromRGB(242, 157, 125),
 })

@@ -11,9 +11,9 @@ export type CropDefinition = {
 }
 
 local crops: {CropDefinition} = {
-	{ Id = "Pumpkin", Name = "Гарбуз", Rarity = "Звичайний", Price = 15, GrowSeconds = 10, Income = 3, Color = Color3.fromRGB(116, 94, 70) },
-	{ Id = "ForestMushroom", Name = "Лісовий гриб", Rarity = "Рідкісний", Price = 75, GrowSeconds = 18, Income = 12, Color = Color3.fromRGB(70, 103, 55) },
-	{ Id = "GoldenTree", Name = "Золота яблуня", Rarity = "Епічна", Price = 240, GrowSeconds = 30, Income = 42, Color = Color3.fromRGB(151, 91, 24) },
+	{ Id = "MimicChest", Name = "Скриня-мімік", Rarity = "Звичайна", Price = 15, GrowSeconds = 10, Income = 3, Color = Color3.fromRGB(196, 179, 156) },
+	{ Id = "WanderingLantern", Name = "Ліхтар-блукач", Rarity = "Рідкісний", Price = 75, GrowSeconds = 18, Income = 12, Color = Color3.fromRGB(164, 195, 154) },
+	{ Id = "MidnightClock", Name = "Годинник опівночі", Rarity = "Епічний", Price = 240, GrowSeconds = 30, Income = 42, Color = Color3.fromRGB(227, 175, 105) },
 }
 
 local byId: {[string]: CropDefinition} = {}

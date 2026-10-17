@@ -58,64 +58,64 @@ end
 local function button(parent: Instance, name: string, value: string): TextButton
 	local b = Instance.new("TextButton")
 	b.Name = name
-	b.BackgroundColor3 = Theme.Green
+	b.BackgroundColor3 = Theme.Action
 	b.BorderSizePixel = 0
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 16
-	b.TextColor3 = Theme.Paper
+	b.TextColor3 = Theme.UIText
 	b.Text = value
 	b.AutoButtonColor = true
 	b.Parent = parent
 	rounded(b, 9)
 	local stroke = Instance.new("UIStroke")
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-	stroke.Color = Theme.Ink
+	stroke.Color = Theme.UIBorder
 	stroke.Transparency = 0.65
 	stroke.Parent = b
 	return b
 end
 
-local status = frame(screen, "FarmStatus", Theme.Paper, 12)
+local status = frame(screen, "FarmStatus", Theme.UIBackground, 12)
 status.Position = UDim2.fromOffset(14, 12)
 status.Size = UDim2.fromOffset(254, 126)
 local edge = Instance.new("UIStroke")
-edge.Color = Theme.Wood
+edge.Color = Theme.UIBorder
 edge.Thickness = 2
 edge.Parent = status
-local heading = text(status, "Title", "Моя ферма", 21, Theme.Ink, Enum.Font.FredokaOne)
+local heading = text(status, "Title", "Моя база", 21, Theme.UIText, Enum.Font.FredokaOne)
 heading.Position = UDim2.fromOffset(16, 8)
 heading.Size = UDim2.fromOffset(220, 28)
-local coinLabel = text(status, "CoinLabel", "Монети", 12, Theme.Muted)
+local coinLabel = text(status, "CoinLabel", "Монети", 12, Theme.UISecondary)
 coinLabel.Position = UDim2.fromOffset(16, 42)
 coinLabel.Size = UDim2.fromOffset(95, 18)
-local coinsText = text(status, "Coins", "40", 29, Theme.Ink, Enum.Font.GothamBold)
+local coinsText = text(status, "Coins", "40", 29, Theme.UIText, Enum.Font.GothamBold)
 coinsText.Position = UDim2.fromOffset(16, 61)
 coinsText.Size = UDim2.fromOffset(110, 34)
-local incomeText = text(status, "Income", "+0 / 5 с", 18, Theme.Green, Enum.Font.GothamBold)
+local incomeText = text(status, "Income", "+0 / 5 с", 18, Theme.Harvest, Enum.Font.GothamBold)
 incomeText.Position = UDim2.fromOffset(132, 59)
 incomeText.Size = UDim2.fromOffset(112, 29)
-local autoText = text(status, "AutoIncome", "автоматично", 11, Theme.Muted)
+local autoText = text(status, "AutoIncome", "автоматично", 11, Theme.UISecondary)
 autoText.Position = UDim2.fromOffset(132, 83)
 autoText.Size = UDim2.fromOffset(110, 16)
-local farmText = text(status, "Beds", "2 грядки · Рівень 1", 12, Theme.Muted)
+local farmText = text(status, "Beds", "Місця 0 / 2 · Рівень 1", 12, Theme.UISecondary)
 farmText.Position = UDim2.fromOffset(16, 103)
 farmText.Size = UDim2.fromOffset(230, 18)
 
-local plantButton = button(screen, "PlantButton", "Посадити")
+local plantButton = button(screen, "PlantButton", "Розмістити")
 plantButton.AnchorPoint = Vector2.new(0.5, 1)
 plantButton.Position = UDim2.new(0.5, 0, 1, -14)
 plantButton.Size = UDim2.fromOffset(202, 48)
 plantButton.TextSize = 18
-local hint = frame(screen, "FarmHint", Theme.Paper, 9)
+local hint = frame(screen, "FarmHint", Theme.UIBackground, 9)
 hint.AnchorPoint = Vector2.new(0.5, 1)
 hint.Position = UDim2.new(0.5, 0, 1, -72)
-local hintText = text(hint, "Text", "Посади гарбуз — він почне заробляти.", 14, Theme.Ink)
+local hintText = text(hint, "Text", "Розмісти міміка — вирости свій перший об’єкт.", 14, Theme.UIText)
 hintText.Size = UDim2.new(1, -20, 1, 0)
 hintText.Position = UDim2.fromOffset(10, 0)
 hintText.TextXAlignment = Enum.TextXAlignment.Center
 hintText.TextWrapped = true
 
-local overlay = frame(screen, "CatalogueOverlay", Theme.Ink)
+local overlay = frame(screen, "CatalogueOverlay", Theme.Night)
 overlay.Size = UDim2.fromScale(1, 1)
 overlay.BackgroundTransparency = 1
 overlay.ZIndex = 20
@@ -123,7 +123,7 @@ overlay.Visible = false
 local backdrop = Instance.new("TextButton")
 backdrop.Name = "CloseBackdrop"
 backdrop.Size = UDim2.fromScale(1, 1)
-backdrop.BackgroundColor3 = Theme.Ink
+backdrop.BackgroundColor3 = Theme.Night
 backdrop.BackgroundTransparency = 0.3
 backdrop.Text = ""
 backdrop.AutoButtonColor = false
@@ -131,20 +131,20 @@ backdrop.BorderSizePixel = 0
 backdrop.Modal = true
 backdrop.Selectable = false
 backdrop.Parent = overlay
-local catalogue = frame(overlay, "SeedCatalogue", Theme.Paper, 14)
+local catalogue = frame(overlay, "SeedCatalogue", Theme.UIBackground, 14)
 catalogue.AnchorPoint = Vector2.new(0.5, 0.5)
 catalogue.Position = UDim2.fromScale(0.5, 0.5)
 catalogue.Active = true
 local catalogueBorder = Instance.new("UIStroke")
-catalogueBorder.Color = Theme.Wood
+catalogueBorder.Color = Theme.UIBorder
 catalogueBorder.Thickness = 3
 catalogueBorder.Parent = catalogue
-local title = text(catalogue, "Title", "Що посадимо?", 27, Theme.Ink, Enum.Font.FredokaOne)
-local subtitle = text(catalogue, "Subtitle", "Грядка 1 · У тебе 40 монет", 14, Theme.Muted)
+local title = text(catalogue, "Title", "Що виростимо?", 27, Theme.UIText, Enum.Font.FredokaOne)
+local subtitle = text(catalogue, "Subtitle", "Місце 1 · У тебе 40 мон.", 14, Theme.UISecondary)
 subtitle.TextWrapped = true
 local closeButton = button(catalogue, "CloseCatalogue", "×")
-closeButton.BackgroundColor3 = Theme.Panel
-closeButton.TextColor3 = Theme.Ink
+closeButton.BackgroundColor3 = Theme.UISurface
+closeButton.TextColor3 = Theme.UIText
 closeButton.TextSize = 26
 closeButton.Size = UDim2.fromOffset(44, 44)
 
@@ -153,18 +153,18 @@ list.Name = "Plants"
 list.BackgroundTransparency = 1
 list.BorderSizePixel = 0
 list.ScrollBarThickness = 4
-list.ScrollBarImageColor3 = Theme.Wood
+list.ScrollBarImageColor3 = Theme.UIBorder
 list.CanvasSize = UDim2.fromOffset(0, 0)
 list.Parent = catalogue
-local footer = frame(catalogue, "Expansion", Theme.Panel, 10)
-local bedsText = text(footer, "Beds", "Грядки 2 / 8", 15, Theme.Ink, Enum.Font.GothamBold)
-local expansionNote = text(footer, "Description", "Більше місця для рослин", 12, Theme.Muted)
-local expandButton = button(footer, "UnlockBed", "Нова грядка · 50")
+local footer = frame(catalogue, "Expansion", Theme.UISurface, 10)
+local bedsText = text(footer, "Beds", "Місця 2 / 8", 15, Theme.UIText, Enum.Font.GothamBold)
+local expansionNote = text(footer, "Description", "Більше об’єктів на базі", 12, Theme.UISecondary)
+local expandButton = button(footer, "UnlockBed", "Нове місце · 50")
 
 type Card = { Frame: Frame, Preview: ViewportFrame, Name: TextLabel, Rarity: TextLabel, Stats: TextLabel, Buy: TextButton, Id: string }
 local cards: {Card} = {}
 for _, crop in Crops.List do
-	local row = frame(list, crop.Id, Theme.Panel, 10)
+	local row = frame(list, crop.Id, Theme.UISurface, 10)
 	local preview = Instance.new("ViewportFrame")
 	preview.Name = "Preview"
 	preview.BackgroundTransparency = 1
@@ -182,19 +182,19 @@ for _, crop in Crops.List do
 	camera.CFrame = CFrame.lookAt(cf.Position + Vector3.new(0.7, 0.45, 1).Unit * math.max(bounds.X, bounds.Y, bounds.Z) * 1.7, cf.Position)
 	camera.Parent = preview
 	preview.CurrentCamera = camera
-	local nameLabel = text(row, "PlantName", crop.Name, 18, Theme.Ink, Enum.Font.GothamBold)
+	local nameLabel = text(row, "PlantName", crop.Name, 18, Theme.UIText, Enum.Font.GothamBold)
 	local rarity = text(row, "Rarity", crop.Rarity, 12, crop.Color, Enum.Font.GothamBold)
-	local stats = text(row, "Stats", crop.GrowSeconds .. " с росту   ·   +" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с", 13, Theme.Muted)
-	local buy = button(row, "Plant", "Посадити · " .. crop.Price)
+	local stats = text(row, "Stats", crop.GrowSeconds .. " с росту   ·   +" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с", 13, Theme.UISecondary)
+	local buy = button(row, "Plant", "Розмістити · " .. crop.Price)
 	table.insert(cards, { Frame = row, Preview = preview, Name = nameLabel, Rarity = rarity, Stats = stats, Buy = buy, Id = crop.Id })
 end
 
-local toast = frame(screen, "Toast", Theme.Paper, 10)
+local toast = frame(screen, "Toast", Theme.UIBackground, 10)
 toast.AnchorPoint = Vector2.new(0.5, 0)
 toast.Position = UDim2.new(0.5, 0, 0, 14)
 toast.ZIndex = 30
 toast.Visible = false
-local toastText = text(toast, "Message", "", 15, Theme.Ink, Enum.Font.GothamBold)
+local toastText = text(toast, "Message", "", 15, Theme.UIText, Enum.Font.GothamBold)
 toastText.Position = UDim2.fromOffset(12, 6)
 toastText.Size = UDim2.new(1, -24, 1, -12)
 toastText.TextWrapped = true
@@ -231,7 +231,7 @@ local function showToast(message: string, ok: boolean?)
 	toastVersion += 1
 	local version = toastVersion
 	toastText.Text = message
-	toastText.TextColor3 = ok == false and Theme.Barn or Theme.Ink
+	toastText.TextColor3 = ok == false and Theme.Error or Theme.UIText
 	toast.Visible = true
 	task.delay(4, function() if toastVersion == version then toast.Visible = false end end)
 end
@@ -246,29 +246,29 @@ refreshShop = function()
 	local coins = player:GetAttribute("Coins") or 0
 	local slots = player:GetAttribute("FarmSlots") or Config.StartingBeds
 	selectedBed = emptyBed(selectedBed)
-	local fullMessage = slots < Config.MaxBeds and "Усі грядки зайняті. Відкрий нову нижче." or "Ферма заповнена. Рослини заробляють самі."
-	subtitle.Text = errorMessage or (selectedBed and ("Грядка " .. selectedBed .. " · У тебе " .. coins .. " мон.") or fullMessage)
-	subtitle.TextColor3 = errorMessage and Theme.Barn or Theme.Muted
+	local fullMessage = slots < Config.MaxBeds and "Усі місця зайняті. Відкрий нове нижче." or "База заповнена. Об’єкти заробляють самі."
+	subtitle.Text = errorMessage or (selectedBed and ("Місце " .. selectedBed .. " · У тебе " .. coins .. " мон.") or fullMessage)
+	subtitle.TextColor3 = errorMessage and Theme.Error or Theme.UISecondary
 	for _, card in cards do
 		local crop = Crops.ById[card.Id]
 		local enabled = not pending and selectedBed ~= nil and coins >= crop.Price
 		card.Buy.Active = enabled
 		card.Buy.Selectable = enabled
 		card.Buy.AutoButtonColor = enabled
-		card.Buy.BackgroundColor3 = enabled and Theme.Green or Theme.Paper
-		card.Buy.TextColor3 = enabled and Theme.Paper or Theme.Muted
-		card.Buy.Text = pending and "Зачекай…" or ("Посадити · " .. crop.Price)
+		card.Buy.BackgroundColor3 = enabled and Theme.Action or Theme.UIBackground
+		card.Buy.TextColor3 = enabled and Theme.UIText or Theme.UISecondary
+		card.Buy.Text = pending and "Зачекай…" or ("Розмістити · " .. crop.Price)
 	end
 	local price = player:GetAttribute("NextBedCost") or 0
-	bedsText.Text = "Грядки " .. slots .. " / " .. Config.MaxBeds
-	expansionNote.Text = slots < Config.MaxBeds and "Більше місця для рослин" or "Ферму повністю відкрито"
-	expandButton.Text = slots < Config.MaxBeds and ("Нова грядка · " .. price) or "Усі грядки відкрито"
+	bedsText.Text = "Місця " .. slots .. " / " .. Config.MaxBeds
+	expansionNote.Text = slots < Config.MaxBeds and "Більше об’єктів на базі" or "Базу повністю відкрито"
+	expandButton.Text = slots < Config.MaxBeds and ("Нове місце · " .. price) or "Усі місця відкрито"
 	local enabled = not pending and slots < Config.MaxBeds and coins >= price
 	expandButton.Active = enabled
 	expandButton.Selectable = enabled
 	expandButton.AutoButtonColor = enabled
-	expandButton.BackgroundColor3 = enabled and Theme.Green or Theme.Paper
-	expandButton.TextColor3 = enabled and Theme.Paper or Theme.Muted
+	expandButton.BackgroundColor3 = enabled and Theme.Action or Theme.UIBackground
+	expandButton.TextColor3 = enabled and Theme.UIText or Theme.UISecondary
 end
 
 local function openCatalogue(index: number?)
@@ -301,7 +301,7 @@ local function sendAction(action: string, cropId: string?)
 		if action == "Plant" then closeCatalogue() else selectedBed = result.bedIndex end
 		showToast(result.message, true)
 	else
-		errorMessage = success and result.message or "Не вдалося посадити. Спробуй ще раз."
+		errorMessage = success and result.message or "Не вдалося розмістити. Спробуй ще раз."
 		showToast(errorMessage or "Спробуй ще раз.", false)
 	end
 	refreshShop()
@@ -322,14 +322,14 @@ local function update()
 	local mature = player:GetAttribute("MatureBeds") or 0
 	coinsText.Text = tostring(coins)
 	incomeText.Text = "+" .. (player:GetAttribute("Income") or 0) .. " / " .. Config.IncomeInterval .. " с"
-	farmText.Text = string.format("Грядки %d / %d · Рівень %d", used, slots, player:GetAttribute("Level") or 1)
-	plantButton.Text = used < slots and "Посадити" or (slots < Config.MaxBeds and "Розширити ферму" or "Моя ферма")
+	farmText.Text = string.format("Місця %d / %d · Рівень %d", used, slots, player:GetAttribute("Level") or 1)
+	plantButton.Text = used < slots and "Розмістити" or (slots < Config.MaxBeds and "Розширити базу" or "Моя база")
 	if used == 0 then
-		hintText.Text = "Посади гарбуз — він почне заробляти."
+		hintText.Text = "Розмісти міміка — вирости свій перший об’єкт."
 	elseif mature == 0 then
-		hintText.Text = "Рослини ростуть. Монети надходитимуть самі."
+		hintText.Text = "Об’єкти ростуть. Монети надходитимуть самі."
 	else
-		hintText.Text = "Дохід надходить сам. Сади ще й розвивай ферму."
+		hintText.Text = "Дохід надходить сам. Вирощуй ще й розвивай базу."
 	end
 	if overlay.Visible then refreshShop() end
 end

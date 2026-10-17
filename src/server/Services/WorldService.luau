@@ -69,6 +69,7 @@ function WorldService.Init()
 	end
 	part(root, "AutumnMeadow", Vector3.new(610, 1, 610), Vector3.new(0, -0.3, 0), Theme.Ground, Enum.Material.Grass, true)
 	part(root, "VillagePath", Vector3.new(22, 0.25, 400), Vector3.new(0, 0.3, 0), Theme.Path, Enum.Material.Ground, true)
+	for _, z in {-70, 70} do Assets.PathLantern(root, Vector3.new(10, 0.2, z)) end
 	villageStation(root)
 	for _, at in positions do
 		local gate = at + Vector3.new(0, 0.34, 50)
@@ -104,27 +105,28 @@ function WorldService.Init()
 		end
 	end
 
-	Lighting.ClockTime = 14.8
-	Lighting.Brightness = 2.5
-	Lighting.Ambient = Color3.fromRGB(157, 142, 117)
-	Lighting.OutdoorAmbient = Color3.fromRGB(158, 150, 126)
-	Lighting.ShadowSoftness = 0.45
+	Lighting.ClockTime = 0.4
+	Lighting.Brightness = 2
+	Lighting.ExposureCompensation = 0.25
+	Lighting.Ambient = Color3.fromRGB(91, 84, 108)
+	Lighting.OutdoorAmbient = Color3.fromRGB(100, 94, 119)
+	Lighting.ShadowSoftness = 0.7
 	local atmosphere = Lighting:FindFirstChild("AnomalyAtmosphere")
 	if atmosphere then atmosphere:Destroy() end
 	local air = Instance.new("Atmosphere")
 	air.Name = "AnomalyAtmosphere"
-	air.Density = 0.18
-	air.Haze = 1
-	air.Color = Color3.fromRGB(238, 219, 181)
-	air.Decay = Color3.fromRGB(174, 143, 112)
+	air.Density = 0.27
+	air.Haze = 1.6
+	air.Color = Color3.fromRGB(141, 132, 157)
+	air.Decay = Color3.fromRGB(61, 53, 72)
 	air.Parent = Lighting
 	local oldGrade = Lighting:FindFirstChild("AutumnColor")
 	if oldGrade then oldGrade:Destroy() end
 	local grade = Instance.new("ColorCorrectionEffect")
 	grade.Name = "AutumnColor"
-	grade.TintColor = Color3.fromRGB(255, 247, 231)
-	grade.Saturation = 0.04
-	grade.Contrast = 0.03
+	grade.TintColor = Color3.fromRGB(236, 227, 255)
+	grade.Saturation = -0.08
+	grade.Contrast = 0.04
 	grade.Parent = Lighting
 end
 

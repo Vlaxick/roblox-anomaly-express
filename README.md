@@ -17,29 +17,33 @@ Roblox tycoon + survival + extraction game.
 - `src/shared` — configuration and modules used by both sides
 - `docs` — design decisions and milestone descriptions
 
-## Current playable farm
+## Current playable base
 
-Start a Play test after connecting Rojo. Each player receives an autumn farm with
-two open beds and 40 coins. Use **Посадити**, or approach an empty bed, to open the
-catalogue. Buying a plant places it directly on the selected bed. Plants grow in
-three visible stages and then add coins to the wallet automatically every five
-seconds. No collector or second currency is involved.
+Start a Play test after connecting Rojo. Each player receives a Halloween clearing
+with two open spaces and 40 coins. Use **Розмістити**, or approach an empty space,
+to open the catalogue. Place a unique living object, let it grow through three
+visible stages, and receive coins automatically every five seconds after maturity.
+This is a base for growing unusual objects, not a vegetable farm.
 
-| Plant | Rarity | Price | Growth | Mature income |
+| Object | Rarity | Price | Growth | Mature income |
 | --- | --- | ---: | ---: | ---: |
-| Pumpkin | Common | 15 | 10 s | 3 coins / 5 s |
-| Forest mushroom | Rare | 75 | 18 s | 12 coins / 5 s |
-| Golden apple tree | Epic | 240 | 30 s | 42 coins / 5 s |
+| Mimic chest | Common | 15 | 10 s | 3 coins / 5 s |
+| Wandering lantern | Rare | 75 | 18 s | 12 coins / 5 s |
+| Midnight clock | Epic | 240 | 30 s | 42 coins / 5 s |
 
-Rarity belongs to the plant type; purchases do not roll random rewards. Open up
-to eight beds through the catalogue or the next locked bed. Expansion prices are
-50, 100, 180, 300, 480 and 750 coins. A plant reaching maturity gives 10 XP.
+Rarity belongs to the object type; purchases do not roll random rewards. Open up
+to eight spaces through the catalogue or the next locked space. Expansion prices
+are 50, 100, 180, 300, 480 and 750 coins. Reaching maturity gives 10 XP.
 
 Purchases, growth, payouts and farm ownership are server-authoritative. The server
-checks funds, bed state and that the player is on their own farm. The catalogue
-uses the same 3D plant models as the world and adapts to narrow screens.
+checks funds, space availability and that the player is on their own base. The
+catalogue uses the same 3D object models as the world and adapts to narrow screens.
 
-Wooden fences, tilled beds, a red barn, hay bales, fallen leaves and golden trees
-share the warm `Theme` palette. Geometry is generated at runtime so the farm stays
-in Git. Progress currently resets between sessions; saving and train expeditions
-are later milestones. The parked train is scenery at this checkpoint.
+Wooden fences, stone growth pads, fallen leaves and rusty foliage frame a moonlit
+night. Candle lanterns, warm windows, decorative jack-o'-lanterns and cobwebs give
+the clearing a Halloween theme. The dusk-coloured HUD uses cream text and amber
+accents. Pumpkins are scenery, not income-generating objects.
+
+Geometry is generated at runtime so the base stays in Git. Progress currently
+resets between sessions; saving and train expeditions are later milestones.
+The parked train is scenery at this checkpoint.

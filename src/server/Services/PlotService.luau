@@ -31,14 +31,14 @@ end
 local function bedLabel(anchor: BasePart): (BillboardGui, TextLabel, TextLabel, TextLabel)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "PlantLabel"
-	gui.Size = UDim2.fromOffset(170, 72)
-	gui.StudsOffset = Vector3.new(0, 2.6, 0)
+	gui.Size = UDim2.fromOffset(148, 68)
+	gui.StudsOffset = Vector3.new(0, 1.4, 0)
 	gui.MaxDistance = 26
 	gui.AlwaysOnTop = false
 	gui.Parent = anchor
 	local panel = Instance.new("Frame")
 	panel.Size = UDim2.fromScale(1, 1)
-	panel.BackgroundColor3 = Theme.Paper
+	panel.BackgroundColor3 = Theme.UIBackground
 	panel.BackgroundTransparency = 0.06
 	panel.BorderSizePixel = 0
 	panel.Parent = gui
@@ -50,13 +50,13 @@ local function bedLabel(anchor: BasePart): (BillboardGui, TextLabel, TextLabel, 
 		t.BackgroundTransparency = 1
 		t.Position = UDim2.fromOffset(6, y)
 		t.Size = UDim2.new(1, -12, 0, height)
-		t.TextColor3 = Theme.Ink
+		t.TextColor3 = Theme.UIText
 		t.Font = font
 		t.TextSize = size
 		t.Parent = panel
 		return t
 	end
-	return gui, line(3, 23, 16, Enum.Font.GothamBold), line(26, 17, 12, Enum.Font.GothamMedium), line(45, 23, 14, Enum.Font.GothamBold)
+	return gui, line(3, 23, 14, Enum.Font.GothamBold), line(26, 17, 12, Enum.Font.GothamMedium), line(45, 23, 14, Enum.Font.GothamBold)
 end
 
 local function refreshBed(farm: Farm, index: number, now: number)
@@ -66,33 +66,33 @@ local function refreshBed(farm: Farm, index: number, now: number)
 	bed.Model:SetAttribute("CropId", bed.CropId or "")
 	bed.Model:SetAttribute("ReadyAt", bed.ReadyAt)
 	bed.Model:SetAttribute("Mature", bed.Mature)
-	bed.Soil.Color = unlocked and Theme.Soil or Theme.Grass
-	bed.Soil.Material = unlocked and Enum.Material.Ground or Enum.Material.Grass
+	bed.Soil.Color = unlocked and Theme.Stone:Lerp(Theme.Iron, 0.35) or Theme.Grass
+	bed.Soil.Material = unlocked and Enum.Material.Slate or Enum.Material.Grass
 	bed.Label.Enabled = unlocked or index == farm.Unlocked + 1
 	bed.Prompt.Enabled = bed.CropId == nil and (unlocked or index == farm.Unlocked + 1)
-	bed.Prompt.ObjectText = "Грядка " .. index
+	bed.Prompt.ObjectText = "Місце " .. index
 	if bed.CropId then
 		local crop = Crops.ById[bed.CropId]
 		bed.Title.Text = crop.Name
 		bed.Rarity.Text = crop.Rarity
 		bed.Rarity.TextColor3 = crop.Color
 		bed.Status.Text = bed.Mature and ("+" .. crop.Income .. " мон. / " .. Config.IncomeInterval .. " с") or ("Росте · " .. math.max(0, math.ceil(bed.ReadyAt - now)) .. " с")
-		bed.Status.TextColor3 = bed.Mature and Theme.Green or Theme.Muted
+		bed.Status.TextColor3 = bed.Mature and Theme.Harvest or Theme.UISecondary
 		bed.Model:SetAttribute("State", bed.Mature and "Mature" or "Growing")
 	elseif unlocked then
-		bed.Title.Text = "Вільна грядка"
-		bed.Rarity.Text = "Місце для рослини"
-		bed.Rarity.TextColor3 = Theme.Muted
-		bed.Status.Text = "Посадити"
-		bed.Status.TextColor3 = Theme.Green
-		bed.Prompt.ActionText = "Посадити"
+		bed.Title.Text = "Вільне місце"
+		bed.Rarity.Text = "Для твого об’єкта"
+		bed.Rarity.TextColor3 = Theme.UISecondary
+		bed.Status.Text = "Розмістити"
+		bed.Status.TextColor3 = Theme.Harvest
+		bed.Prompt.ActionText = "Розмістити"
 		bed.Model:SetAttribute("State", "Empty")
 	else
-		bed.Title.Text = "Нова грядка"
-		bed.Rarity.Text = "Більше місця для рослин"
-		bed.Rarity.TextColor3 = Theme.Muted
+		bed.Title.Text = "Нове місце"
+		bed.Rarity.Text = "Більше об’єктів на базі"
+		bed.Rarity.TextColor3 = Theme.UISecondary
 		bed.Status.Text = (Config.BedPrices[index] or 0) .. " монет"
-		bed.Status.TextColor3 = Theme.Ink
+		bed.Status.TextColor3 = Theme.UIText
 		bed.Prompt.ActionText = "Відкрити · " .. (Config.BedPrices[index] or 0) .. " монет"
 		bed.Model:SetAttribute("State", "Locked")
 	end
@@ -126,7 +126,7 @@ local function onFarm(player: Player, farm: Farm): boolean
 end
 
 local function unlock(player: Player, farm: Farm): (boolean, string, number?)
-	if farm.Unlocked >= Config.MaxBeds then return false, "Усі грядки вже відкриті.", nil end
+	if farm.Unlocked >= Config.MaxBeds then return false, "Усі місця вже відкриті.", nil end
 	local index = farm.Unlocked + 1
 	local price = Config.BedPrices[index]
 	local coins = player:GetAttribute("Coins") or 0
@@ -136,15 +136,15 @@ local function unlock(player: Player, farm: Farm): (boolean, string, number?)
 	refreshBed(farm, index, Workspace:GetServerTimeNow())
 	if index < Config.MaxBeds then refreshBed(farm, index + 1, Workspace:GetServerTimeNow()) end
 	refreshStats(farm)
-	return true, "Грядку відкрито. Тепер можна посадити рослину.", index
+	return true, "Місце відкрито. Тепер можна виростити об’єкт.", index
 end
 
 local function plant(player: Player, farm: Farm, index: number, cropId: string): (boolean, string)
 	local bed = farm.Beds[index]
 	local crop = Crops.ById[cropId]
-	if not bed or index > farm.Unlocked then return false, "Спочатку відкрий цю грядку." end
-	if bed.CropId then return false, "На цій грядці вже росте рослина." end
-	if not crop then return false, "Обери рослину з каталогу." end
+	if not bed or index > farm.Unlocked then return false, "Спочатку відкрий це місце." end
+	if bed.CropId then return false, "Тут уже росте об’єкт." end
+	if not crop then return false, "Обери об’єкт із каталогу." end
 	local coins = player:GetAttribute("Coins") or 0
 	if coins < crop.Price then return false, "Потрібно ще " .. (crop.Price - coins) .. " мон." end
 	player:SetAttribute("Coins", coins - crop.Price)
@@ -160,7 +160,7 @@ local function plant(player: Player, farm: Farm, index: number, cropId: string):
 	bed.Crop = model
 	refreshBed(farm, index, now)
 	refreshStats(farm)
-	return true, "Посаджено: " .. crop.Name .. ". Ріст — " .. crop.GrowSeconds .. " с."
+	return true, "Розміщено: " .. crop.Name .. ". Ріст — " .. crop.GrowSeconds .. " с."
 end
 
 local function decorate(farm: Model, at: Vector3)
@@ -196,7 +196,15 @@ local function decorate(farm: Model, at: Vector3)
 		brace.CFrame *= CFrame.Angles(0, 0, side * 0.73)
 	end
 	part(farm, "BarnWindowTrim", Vector3.new(3, 3, 0.3), barn + Vector3.new(-5.9, 5, 7.7), Theme.Panel)
-	part(farm, "BarnWindow", Vector3.new(2.3, 2.3, 0.35), barn + Vector3.new(-5.9, 5, 7.85), Color3.fromRGB(112, 137, 130), Enum.Material.Glass)
+	local window = part(farm, "BarnWindow", Vector3.new(2.3, 2.3, 0.35), barn + Vector3.new(-5.9, 5, 7.85), Theme.Harvest, Enum.Material.Glass)
+	local glow = Instance.new("SurfaceLight")
+	glow.Face = Enum.NormalId.Back
+	glow.Color = Color3.fromRGB(255, 184, 99)
+	glow.Brightness = 1.5
+	glow.Range = 20
+	glow.Angle = 130
+	glow.Parent = window
+	Assets.Cobweb(farm, barn + Vector3.new(-8.7, 7.8, 7.9), 3.4)
 	part(farm, "DoorStep", Vector3.new(8, 0.35, 3), barn + Vector3.new(0, 0.15, 9), Theme.Stone, Enum.Material.Cobblestone)
 	Assets.Tree(farm, at + Vector3.new(31, 0.6, -39), 1.25, Theme.Harvest)
 	for _, pos in {Vector3.new(-35, 1.6, 3), Vector3.new(-35, 1.6, 8), Vector3.new(35, 1.6, -12)} do
@@ -205,10 +213,11 @@ local function decorate(farm: Model, at: Vector3)
 			part(farm, "HayTwine", Vector3.new(0.22, 2.5, 3.1), hay.Position + Vector3.new(band, 0, 0), Theme.Wood)
 		end
 	end
-	local pumpkins = Assets.Crop("Pumpkin", at + Vector3.new(-37, 0.7, -27))
-	pumpkins:ScaleTo(0.7)
-	pumpkins.Name = "PorchPumpkins"
-	pumpkins.Parent = farm
+	Assets.Pumpkins(farm, at + Vector3.new(-37, 0.7, -27))
+	Assets.Pumpkins(farm, at + Vector3.new(12, 0.7, 42))
+	for _, lampPosition in {Vector3.new(-30, 0.7, 34), Vector3.new(30, 0.7, 34), Vector3.new(7, 0.7, 9), Vector3.new(-7, 0.7, -23)} do
+		Assets.PathLantern(farm, at + lampPosition)
+	end
 	part(farm, "MailboxPost", Vector3.new(0.65, 3.2, 0.65), at + Vector3.new(33, 2.1, 38), Theme.Wood, Enum.Material.Wood)
 	part(farm, "Mailbox", Vector3.new(2.5, 1.6, 3), at + Vector3.new(33, 4.1, 38), Theme.Barn, Enum.Material.Metal)
 	local random = Random.new(math.floor(math.abs(at.X) + math.abs(at.Z)))
@@ -228,7 +237,7 @@ local function createFarm(index: number, root: Folder): Farm
 	model.Parent = root
 	decorate(model, at)
 	local ownerBoard = part(model, "FarmName", Vector3.new(12, 2.6, 0.5), at + Vector3.new(-24, 4.3, 42), Theme.Wood, Enum.Material.Wood)
-	local ownerText = Assets.Sign(ownerBoard, "Вільна ферма")
+	local ownerText = Assets.Sign(ownerBoard, "Вільна база")
 	local farm: Farm = { Index = index, Model = model, Owner = nil, Unlocked = Config.StartingBeds, Beds = {}, Sign = ownerText }
 	local bedsFolder = Instance.new("Folder")
 	bedsFolder.Name = "Beds"
@@ -285,7 +294,7 @@ local function assign(player: Player)
 			farm.Owner = player
 			playerFarms[player] = farm
 			farm.Model:SetAttribute("OwnerUserId", player.UserId)
-			farm.Sign.Text = "Ферма " .. player.DisplayName
+			farm.Sign.Text = "База " .. player.DisplayName
 			player:SetAttribute("FarmIndex", farm.Index)
 			player:SetAttribute("Coins", Config.StartingCoins)
 			refreshStats(farm)
@@ -306,7 +315,7 @@ local function release(player: Player)
 	farm.Unlocked = Config.StartingBeds
 	farm.Model:SetAttribute("OwnerUserId", 0)
 	farm.Model:SetAttribute("UnlockedBeds", Config.StartingBeds)
-	farm.Sign.Text = "Вільна ферма"
+	farm.Sign.Text = "Вільна база"
 	for index, bed in farm.Beds do
 		if bed.Crop then bed.Crop:Destroy() end
 		bed.Crop, bed.CropId = nil, nil
@@ -333,7 +342,7 @@ function PlotService.Init()
 	request.Parent = remotes
 	request.OnServerInvoke = function(player: Player, action: any, index: any, cropId: any)
 		local farm = playerFarms[player]
-		if not farm or not onFarm(player, farm) then return { ok = false, message = "Повернися на свою ферму." } end
+		if not farm or not onFarm(player, farm) then return { ok = false, message = "Повернися на свою базу." } end
 		local now = os.clock()
 		if now - (lastRequest[player] or -1) < 0.25 then return { ok = false, message = "Зачекай мить." } end
 		lastRequest[player] = now
