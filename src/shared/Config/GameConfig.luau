@@ -9,6 +9,11 @@ local GameConfig = {
 	TrainBoardingSeconds = 45,
 	ExpeditionDurationSeconds = 300,
 	FieldXpLossOnFailure = 0.5,
+	PlotCount = 6,
+	EyeFlowerProductionSeconds = 5,
+	EyeFlowerEnergyPerCycle = 5,
+	EyeFlowerStorageLimit = 100,
+	EyeFlowerCollectionXP = 5,
 }
 
 return table.freeze(GameConfig)

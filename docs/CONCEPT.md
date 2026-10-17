@@ -22,3 +22,11 @@ Tycoon, survival, extraction, and collection game for Roblox.
 - Return and incubation flow
 - Ten player levels with movement-speed progression
 
+## First playable checkpoint
+
+Six plots are generated when a server starts. Each player claims a free plot and
+spawns beside its Eye Flower. The flower makes five energy every five seconds,
+up to 100 stored energy. The owner collects it from the glowing collector and
+earns five XP per collection. This is a temporary prototype loop; saving,
+upgrades, train travel, and expeditions are the next milestones.
+
