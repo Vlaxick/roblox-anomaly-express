@@ -2,6 +2,39 @@
 
 Roblox tycoon + survival + extraction game.
 
+## Central Station and town
+
+The world now has a 330 × 280-stud brick-and-glass station, barrel-vault roof,
+clock, ticket counters, waiting benches, directory, four gates, long platform and
+four-car parked train. A town square, shopfront scenery, lit avenue and connected
+home lanes surround it. Six bases occupy a separate residential district.
+
+Use the **Station** and **Home** HUD buttons for quick travel, or walk the streets.
+At the back of the main hall, approach a gate control and use **Enter**:
+
+| Gate | Destination | Play | Reward |
+| --- | --- | --- | --- |
+| 01 | Skyline Obby | 12 stages, checkpoints at 5 and 9, safe fall resets | 25 coins + 12 XP |
+| 02 | Circuit Run | Walk over all six floor buttons within 30 seconds | 15 coins + 8 XP |
+| 03 | Memory Room | Study four numbers for 5 seconds, then step on them in order | 20 coins + 10 XP |
+| 04 | Platform 1 | Explore the train platform | No reward / train service not active yet |
+
+Button-room progress and patterns are individual, not shared across players.
+Each activity pays at most once per player every 90 seconds; practice is always
+available. Death, travel, leaving the room and timeouts clear the active attempt.
+Only server-validated physical contacts advance progress. The client cannot submit
+a completed stage, arbitrary position, reward amount or activity teleport.
+
+All authored game UI, signs, loot names, rarity labels and error messages are now
+English, including the disabled Halloween collection. Roblox's own system menus,
+keyboard-key glyphs and player display names follow the user's Roblox settings.
+Activity instructions/progress replace the collection HUD while playing, leaving
+the lower screen clear for movement controls.
+
+The departure board explicitly marks expedition service as in development. There
+is no fake departure countdown: these are working lobby activities, not a claim
+that train extraction/saving is implemented. Shops are town scenery at this stage.
+
 ## Development workflow
 
 1. Keep Luau source and project configuration in this repository.
@@ -21,17 +54,17 @@ Roblox tycoon + survival + extraction game.
 
 Start a Play test after connecting Rojo. Each player receives a collector's
 autumn courtyard, two circular display stands and 40 earned coins. Open
-**Знахідки**, or approach an empty stand. Place a sealed find, wait for unpacking,
-then explicitly choose **Відкрити** on its stand or the HUD. One random character
+**Finds**, or approach an empty stand. Place a sealed find, wait for unpacking,
+then explicitly choose **Open** on its stand or the HUD. One random character
 replaces the container and generates coins automatically every five seconds.
 Containers stay full-sized: nothing grows in planting beds.
 
 | Find | Rarity | Coins | Unpacking | Character pool (coins / 5 s) |
 | --- | --- | ---: | ---: | --- |
-| Дорожній кофр — canvas travel case | Common | 15 | 8 s | Шестерик 70% (+3), Камінчик 30% (+5) |
-| Мандрівна капсула — enamel expedition pod | Rare | 75 | 15 s | Мохоспин 65% (+13), Поштарик 35% (+18) |
-| Кристалічна жеода — stone/crystal specimen | Epic | 240 | 25 s | Призма 60% (+44), Атлас 40% (+60) |
-| Астральна сфера — armillary globe | Legendary | 650 | 40 s | Зорекрил 75% (+130), Небоплав 25% (+180) |
+| Travel Case — canvas travel case | Common | 15 | 8 s | Scrapling 70% (+3), Pebble 30% (+5) |
+| Trail Capsule — enamel expedition pod | Rare | 75 | 15 s | Mossback 65% (+13), Postbird 35% (+18) |
+| Prism Geode — stone/crystal specimen | Epic | 240 | 25 s | Prism 60% (+44), Atlas 40% (+60) |
+| Atlas Sphere — armillary globe | Legendary | 650 | 40 s | Starray 75% (+130), Skywhale 25% (+180) |
 
 Loot is year-round: a tool robot, mineral creature, moss-backed turtle, postal
 bird, crystal fox, compass golem, star ray and sky whale. These have their own

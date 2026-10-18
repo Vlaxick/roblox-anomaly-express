@@ -12,6 +12,35 @@ Tycoon, survival, extraction, and collection game for Roblox.
 6. In a later milestone, board the train every five minutes, survive dangerous
    regions and bring finds home. Current earned-coin supplies exercise the base loop.
 
+## Station-city milestone
+
+The town is organized around a monumental railway concourse: a glass barrel vault,
+warm brick, limestone columns, brass details and numbered English wayfinding.
+The central axis stays open from the square to the gate hall. Ticket counters and
+waiting benches sit to the sides; the collector bases sit in their own residential
+district rather than crowding the platforms. Street-level scenery establishes the
+town without pretending that every shop is a working economy system.
+
+Three working activities make the waiting area playable:
+
+- **Skyline Obby:** sequential elevated platforms with saved checkpoints and safe
+  fall resets. The finish rewards completing the whole route, not touching a trophy.
+- **Circuit Run:** six pressure buttons, one 30-second attempt, any order. Buttons
+  give a brief physical press pulse; progress is tracked separately for each player.
+- **Memory Room:** a private four-number pattern shown for five seconds; the
+  player repeats it by walking on eight numbered floor buttons. Mistakes replay the
+  study phase instead of killing the player or resetting someone else's attempt.
+
+Gates 01–03 enter those activities; Gate 04 reaches the platform. No rewards are
+sold for Robux. Coins and XP have a per-player/per-activity 90-second reward cooldown;
+practice can continue without payouts. Activity HUDs show goals, counters, time and
+reward eligibility while leaving movement/jump controls unobstructed. Home/Station
+travel cancels the current attempt and offers an escape route from every room.
+
+All authored game-facing content is English. Expedition departures and persistent
+progress remain separate milestones; signs clearly label the parked train's service
+as in development rather than announcing trips that cannot happen yet.
+
 ## First playable milestone
 
 - One personal autumn base per player, currently dressed for Halloween

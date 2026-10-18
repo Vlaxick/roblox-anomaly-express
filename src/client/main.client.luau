@@ -75,24 +75,24 @@ end
 local status = frame(screen, "BaseStatus", Theme.UIBackground, 12)
 place(status, 14, 12, 254, 126)
 local edge = Instance.new("UIStroke"); edge.Color = Theme.UIBorder; edge.Thickness = 2; edge.Parent = status
-local heading = text(status, "Title", "Моя колекція", 21, Theme.UIText, Enum.Font.FredokaOne)
+local heading = text(status, "Title", "My Collection", 21, Theme.UIText, Enum.Font.FredokaOne)
 place(heading, 16, 8, 220, 28)
-place(text(status, "CoinLabel", "Монети", 12, Theme.UISecondary), 16, 42, 95, 18)
+place(text(status, "CoinLabel", "Coins", 12, Theme.UISecondary), 16, 42, 95, 18)
 local coinsText = text(status, "Coins", "40", 29, Theme.UIText, Enum.Font.GothamBold)
 place(coinsText, 16, 61, 110, 34)
-local incomeText = text(status, "Income", "+0 / 5 с", 18, Theme.Harvest, Enum.Font.GothamBold)
+local incomeText = text(status, "Income", "+0 / 5 s", 18, Theme.Harvest, Enum.Font.GothamBold)
 place(incomeText, 132, 59, 112, 29)
-place(text(status, "AutoIncome", "від персонажів", 11, Theme.UISecondary), 132, 83, 112, 16)
-local baseText = text(status, "Stands", "Підставки 0 / 2 · Рівень 1", 12, Theme.UISecondary)
+place(text(status, "AutoIncome", "from companions", 11, Theme.UISecondary), 132, 83, 112, 16)
+local baseText = text(status, "Stands", "Stands 0 / 2 · Level 1", 12, Theme.UISecondary)
 place(baseText, 16, 103, 232, 18)
 
 local actions = frame(screen, "Actions", Theme.Night)
 actions.BackgroundTransparency = 1; actions.AnchorPoint = Vector2.new(0.5, 1); actions.Position = UDim2.new(0.5, 0, 1, -14)
-local catalogueButton = button(actions, "FindsButton", "Знахідки")
-local readyButton = button(actions, "OpenReady", "Відкрити")
+local catalogueButton = button(actions, "FindsButton", "Finds")
+local readyButton = button(actions, "OpenReady", "Open")
 local hint = frame(screen, "BaseHint", Theme.UIBackground, 9)
 hint.AnchorPoint = Vector2.new(0.5, 1); hint.Position = UDim2.new(0.5, 0, 1, -72)
-local hintText = text(hint, "Text", "Обери знахідку та постав її на підставку.", 14, Theme.UIText)
+local hintText = text(hint, "Text", "Choose a find and place it on a stand.", 14, Theme.UIText)
 hintText.Position = UDim2.fromOffset(10, 0); hintText.Size = UDim2.new(1, -20, 1, 0)
 hintText.TextXAlignment = Enum.TextXAlignment.Center; hintText.TextWrapped = true
 
@@ -105,7 +105,7 @@ backdrop.BorderSizePixel = 0; backdrop.Modal = true; backdrop.Selectable = false
 local catalogue = frame(overlay, "FindCatalogue", Theme.UIBackground, 14)
 catalogue.AnchorPoint = Vector2.new(0.5, 0.5); catalogue.Position = UDim2.fromScale(0.5, 0.5); catalogue.Active = true
 local border = Instance.new("UIStroke"); border.Color = Theme.UIBorder; border.Thickness = 3; border.Parent = catalogue
-local title = text(catalogue, "Title", "Знахідки експедицій", 26, Theme.UIText, Enum.Font.FredokaOne)
+local title = text(catalogue, "Title", "Expedition Finds", 26, Theme.UIText, Enum.Font.FredokaOne)
 local subtitle = text(catalogue, "Subtitle", "", 14, Theme.UISecondary); subtitle.TextWrapped = true
 local closeButton = button(catalogue, "CloseCatalogue", "×"); closeButton.TextSize = 26; closeButton.BackgroundColor3 = Theme.UISurface
 local list = Instance.new("ScrollingFrame")
@@ -113,7 +113,7 @@ list.Name = "Finds"; list.BackgroundTransparency = 1; list.BorderSizePixel = 0
 list.ScrollBarThickness = 4; list.ScrollBarImageColor3 = Theme.UIBorder; list.Parent = catalogue
 local footer = frame(catalogue, "Expansion", Theme.UISurface, 10)
 local standsText = text(footer, "Stands", "", 14, Theme.UIText, Enum.Font.GothamBold)
-local expandButton = button(footer, "UnlockStand", "Нове місце · 50")
+local expandButton = button(footer, "UnlockStand", "New stand · 50")
 
 type Card = { Frame: Frame, Preview: ViewportFrame, Name: TextLabel, Rarity: TextLabel, Stats: TextLabel, Odds: TextLabel, Buy: TextButton, Id: string }
 local cards: {Card} = {}
@@ -121,17 +121,17 @@ for _, find in Finds.List do
 	local row = frame(list, find.Id, Theme.UISurface, 10)
 	local v = preview(row); setPreview(v, Assets.Container(find.Id, Vector3.zero))
 	local name = text(row, "FindName", find.Name, 18, Theme.UIText, Enum.Font.GothamBold); name.TextWrapped = true
-	local rarityName = find.Rarity .. (Finds.FindCollectionById[find.Id] == "Permanent" and "" or " · Івент")
+	local rarityName = find.Rarity .. (Finds.FindCollectionById[find.Id] == "Permanent" and "" or " · Event")
 	local rarity = text(row, "Rarity", rarityName, 13, find.Color, Enum.Font.GothamBold)
-	local stats = text(row, "Stats", "Розпакування: " .. find.OpenSeconds .. " с", 13, Theme.UISecondary)
+	local stats = text(row, "Stats", "Unpacking: " .. find.OpenSeconds .. " s", 13, Theme.UISecondary)
 	local lines = {}
 	for _, drop in find.Drops do
 		local c = Finds.CharacterById[drop.Id]
-		table.insert(lines, c.Name .. " " .. drop.Weight .. "% · +" .. c.Income .. " / " .. Config.IncomeInterval .. " с")
+		table.insert(lines, c.Name .. " " .. drop.Weight .. "% · +" .. c.Income .. " / " .. Config.IncomeInterval .. " s")
 	end
 	local odds = text(row, "Odds", table.concat(lines, "\n"), 13, Theme.UIText)
 	odds.TextWrapped = true; odds.TextYAlignment = Enum.TextYAlignment.Top
-	local buy = button(row, "Place", "Поставити · " .. find.Price)
+	local buy = button(row, "Place", "Place · " .. find.Price)
 	table.insert(cards, { Frame = row, Preview = v, Name = name, Rarity = rarity, Stats = stats, Odds = odds, Buy = buy, Id = find.Id })
 end
 
@@ -143,14 +143,14 @@ local revealBackdrop = backdrop:Clone(); revealBackdrop.Parent = revealOverlay
 local reveal = frame(revealOverlay, "CharacterCard", Theme.UIBackground, 16)
 reveal.AnchorPoint = Vector2.new(0.5, 0.5); reveal.Position = UDim2.fromScale(0.5, 0.5)
 local revealBorder = border:Clone(); revealBorder.Parent = reveal
-local revealTitle = text(reveal, "Title", "Новий мешканець!", 25, Theme.UIText, Enum.Font.FredokaOne)
+local revealTitle = text(reveal, "Title", "New Companion!", 25, Theme.UIText, Enum.Font.FredokaOne)
 local revealRarity = text(reveal, "Rarity", "", 14, Theme.Harvest, Enum.Font.GothamBold)
 local revealPreview = preview(reveal)
 local revealName = text(reveal, "CharacterName", "", 23, Theme.UIText, Enum.Font.GothamBold)
 local revealIncome = text(reveal, "Income", "", 16, Theme.Harvest, Enum.Font.GothamBold)
 for _, t in {revealTitle, revealRarity, revealName, revealIncome} do t.TextXAlignment = Enum.TextXAlignment.Center end
-local keepButton = button(reveal, "Keep", "На базу")
-local sellButton = button(reveal, "Sell", "Продати"); sellButton.BackgroundColor3 = Theme.UISurface
+local keepButton = button(reveal, "Keep", "Back")
+local sellButton = button(reveal, "Sell", "Sell"); sellButton.BackgroundColor3 = Theme.UISurface
 
 local function syncWorldPresentation()
 	StandPresentation.SetModalOpen(overlay.Visible or revealOverlay.Visible)
@@ -213,15 +213,15 @@ end
 refreshShop = function()
 	local coins, slots = player:GetAttribute("Coins") or 0, player:GetAttribute("BaseSlots") or Config.StartingStands
 	selectedStand = findStand("Empty", selectedStand)
-	subtitle.Text = errorMessage or (selectedStand and (Finds.Label .. " · Підставка " .. selectedStand .. " · " .. coins .. " мон.") or "Немає місця. Додай підставку або продай персонажа.")
+	subtitle.Text = errorMessage or (selectedStand and (Finds.Label .. " · Stand " .. selectedStand .. " · " .. coins .. " coins") or "No space. Add a stand or sell a companion.")
 	subtitle.TextColor3 = errorMessage and Theme.Error or Theme.UISecondary
 	for _, card in cards do
 		local f = Finds.ById[card.Id]
 		enable(card.Buy, not pending and selectedStand ~= nil and coins >= f.Price)
-		card.Buy.Text = pending and "Зачекай…" or ("Поставити · " .. f.Price)
+		card.Buy.Text = pending and "Please wait..." or ("Place · " .. f.Price)
 	end
-	standsText.Text = "Підставки " .. slots .. " / " .. Config.MaxStands
-	expandButton.Text = slots < Config.MaxStands and ("Нова · " .. (player:GetAttribute("NextStandCost") or 0) .. " мон.") or "Усі відкрито"
+	standsText.Text = "Stands " .. slots .. " / " .. Config.MaxStands
+	expandButton.Text = slots < Config.MaxStands and ("New · " .. (player:GetAttribute("NextStandCost") or 0) .. " coins") or "All unlocked"
 	enable(expandButton, not pending and slots < Config.MaxStands and coins >= (player:GetAttribute("NextStandCost") or 0))
 end
 local function openCatalogue(index: number?)
@@ -239,8 +239,8 @@ local function invoke(action: string, index: number?, id: string?)
 		if action == "Unlock" then selectedStand = result.standIndex end
 		if action ~= "Open" then showToast(result.message, true) end
 	else
-		errorMessage = success and typeof(result) == "table" and result.message or "Не вдалося виконати дію. Спробуй ще раз."
-		showToast(errorMessage or "Спробуй ще раз.", false)
+		errorMessage = success and typeof(result) == "table" and result.message or "Could not complete the action. Try again."
+		showToast(errorMessage or "Try again.", false)
 	end
 	enable(readyButton, true); enable(sellButton, true); refreshShop()
 end
@@ -255,15 +255,15 @@ expandButton.Activated:Connect(function() invoke("Unlock", nil, nil) end)
 catalogueButton.Activated:Connect(function() openCatalogue(nil) end)
 readyButton.Activated:Connect(function()
 	local index = findStand("Ready", nil)
-	if index then invoke("Open", index, nil) else showToast("Зачекай завершення розпакування.", false) end
+	if index then invoke("Open", index, nil) else showToast("Wait for unpacking to finish.", false) end
 end)
 closeButton.Activated:Connect(closeModals); backdrop.Activated:Connect(closeModals)
 keepButton.Activated:Connect(closeModals); revealBackdrop.Activated:Connect(closeModals)
 sellButton.Activated:Connect(function()
 	if pending or not inspectedStand or not inspectedId then return end
 	if not confirmSell then
-		confirmSell = true; sellButton.Text = "Так, продати"
-		revealIncome.Text = "Персонаж зникне, підставка звільниться."
+		confirmSell = true; sellButton.Text = "Confirm sale"
+		revealIncome.Text = "Removes this companion and frees its stand."
 		return
 	end
 	invoke("Sell", inspectedStand, nil)
@@ -275,24 +275,24 @@ showCharacter.OnClientEvent:Connect(function(id: string, index: number, isNew: b
 	if not c then return end
 	bindClose(keepButton); overlay.Visible = false; revealOverlay.Visible = true; toast.Visible = false
 	inspectedStand = index; inspectedId = id; inspection = not isNew; confirmSell = false
-	revealTitle.Text = isNew and "Новий мешканець!" or ("Підставка " .. index)
+	revealTitle.Text = isNew and "New Companion!" or ("Stand " .. index)
 	revealName.Text = c.Name; revealRarity.Text = c.Rarity; revealRarity.TextColor3 = c.Color; revealBorder.Color = c.Color
-	revealIncome.Text = "+" .. c.Income .. " монет кожні " .. Config.IncomeInterval .. " с — автоматично"
-	sellButton.Text = "Продати · " .. c.SellPrice; sellButton.Visible = inspection
-	keepButton.Text = isNew and "На базу" or "Залишити"
+	revealIncome.Text = "+" .. c.Income .. " coins every " .. Config.IncomeInterval .. " s — automatic"
+	sellButton.Text = "Sell · " .. c.SellPrice; sellButton.Visible = inspection
+	keepButton.Text = isNew and "Back" or "Keep"
 	setPreview(revealPreview, Assets.Character(id, Vector3.zero)); resize()
 end)
 local function update()
 	local slots, used = player:GetAttribute("BaseSlots") or Config.StartingStands, player:GetAttribute("UsedStands") or 0
 	local ready, residents = player:GetAttribute("ReadyFinds") or 0, player:GetAttribute("Residents") or 0
 	coinsText.Text = tostring(player:GetAttribute("Coins") or 0)
-	incomeText.Text = "+" .. (player:GetAttribute("Income") or 0) .. " / " .. Config.IncomeInterval .. " с"
-	baseText.Text = string.format("Підставки %d / %d · Рівень %d", used, slots, player:GetAttribute("Level") or 1)
-	readyButton.Visible = ready > 0; readyButton.Text = "Відкрити · " .. ready
-	if ready > 0 then hintText.Text = "Знахідка готова! Відкрий і дізнайся, хто всередині."
-	elseif used == 0 then hintText.Text = "Обери знахідку та постав її на підставку."
-	elseif (player:GetAttribute("SealedFinds") or 0) > 0 then hintText.Text = "Знахідка розпаковується. Скоро можна буде відкрити."
-	elseif residents > 0 then hintText.Text = "Персонажі заробляють самі. Збирай нові знахідки!" end
+	incomeText.Text = "+" .. (player:GetAttribute("Income") or 0) .. " / " .. Config.IncomeInterval .. " s"
+	baseText.Text = string.format("Stands %d / %d · Level %d", used, slots, player:GetAttribute("Level") or 1)
+	readyButton.Visible = ready > 0; readyButton.Text = "Open · " .. ready
+	if ready > 0 then hintText.Text = "Your find is ready! Open it to meet your companion."
+	elseif used == 0 then hintText.Text = "Choose a find and place it on a stand."
+	elseif (player:GetAttribute("SealedFinds") or 0) > 0 then hintText.Text = "Your find is unpacking. It will be ready soon."
+	elseif residents > 0 then hintText.Text = "Companions earn automatically. Discover more finds!" end
 	if overlay.Visible then refreshShop() end
 	local width = actions.AbsoluteSize.X
 	if ready > 0 then place(catalogueButton, 0, 0, (width - 8) / 2, 48); place(readyButton, (width + 8) / 2, 0, (width - 8) / 2, 48)

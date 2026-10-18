@@ -58,32 +58,32 @@ local function refreshStand(base: Base, index: number, now: number)
 	s.Platform.Color = unlocked and Theme.Wood or Theme.Stone:Lerp(Theme.Iron, 0.45)
 	s.Label:SetAttribute("VisibleAtRest", unlocked or index == base.Unlocked + 1)
 	s.Prompt.Enabled = unlocked or index == base.Unlocked + 1
-	s.Prompt.ObjectText = "Підставка " .. index
+	s.Prompt.ObjectText = "Stand " .. index
 	if s.CharacterId then
 		local c = Finds.CharacterById[s.CharacterId]
 		s.Title.Text = c.Name; s.Rarity.Text = c.Rarity; s.Rarity.TextColor3 = c.Color
-		s.Status.Text = "+" .. c.Income .. " мон. / " .. Config.IncomeInterval .. " с"
-		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Оглянути"
-		s.Prompt.ObjectText = c.Name .. " · +" .. c.Income .. " / " .. Config.IncomeInterval .. " с"
+		s.Status.Text = "+" .. c.Income .. " coins / " .. Config.IncomeInterval .. " s"
+		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Inspect"
+		s.Prompt.ObjectText = c.Name .. " · +" .. c.Income .. " / " .. Config.IncomeInterval .. " s"
 		s.Model:SetAttribute("State", "Occupied")
 	elseif s.FindId then
 		local f = Finds.AllById[s.FindId]
 		local ready = now >= s.ReadyAt
-		s.Title.Text = f.Name; s.Rarity.Text = f.Rarity .. " знахідка"; s.Rarity.TextColor3 = f.Color
-		s.Status.Text = ready and "Готово! Відкрий" or ("Розпакування · " .. math.max(0, math.ceil(s.ReadyAt - now)) .. " с")
+		s.Title.Text = f.Name; s.Rarity.Text = f.Rarity .. " find"; s.Rarity.TextColor3 = f.Color
+		s.Status.Text = ready and "Ready! Open now" or ("Unpacking · " .. math.max(0, math.ceil(s.ReadyAt - now)) .. " s")
 		s.Status.TextColor3 = ready and Theme.Harvest or Theme.UISecondary
-		s.Prompt.Enabled = ready; s.Prompt.ActionText = "Відкрити"
+		s.Prompt.Enabled = ready; s.Prompt.ActionText = "Open"
 		s.Prompt.ObjectText = f.Name
 		s.Model:SetAttribute("State", ready and "Ready" or "Sealed")
 	elseif unlocked then
-		s.Title.Text = "Вільна підставка"; s.Rarity.Text = "Постав сюди знахідку"
-		s.Rarity.TextColor3 = Theme.UISecondary; s.Status.Text = "Обрати знахідку"
-		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Обрати знахідку"
+		s.Title.Text = "Empty stand"; s.Rarity.Text = "Place a find here"
+		s.Rarity.TextColor3 = Theme.UISecondary; s.Status.Text = "Choose a find"
+		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Choose a find"
 		s.Model:SetAttribute("State", "Empty")
 	else
-		s.Title.Text = "Нова підставка"; s.Rarity.Text = "Місце для колекції"
-		s.Rarity.TextColor3 = Theme.UISecondary; s.Status.Text = (Config.StandPrices[index] or 0) .. " монет"
-		s.Status.TextColor3 = Theme.UIText; s.Prompt.ActionText = "Додати · " .. (Config.StandPrices[index] or 0) .. " монет"
+		s.Title.Text = "New stand"; s.Rarity.Text = "Room for your collection"
+		s.Rarity.TextColor3 = Theme.UISecondary; s.Status.Text = (Config.StandPrices[index] or 0) .. " coins"
+		s.Status.TextColor3 = Theme.UIText; s.Prompt.ActionText = "Unlock · " .. (Config.StandPrices[index] or 0) .. " coins"
 		s.Model:SetAttribute("State", "Locked")
 	end
 end
@@ -120,35 +120,35 @@ local function allowRequest(p: Player): boolean
 	return true
 end
 local function unlock(p: Player, base: Base): (boolean, string, number?)
-	if base.Unlocked >= Config.MaxStands then return false, "Усі підставки вже відкриті.", nil end
+	if base.Unlocked >= Config.MaxStands then return false, "All stands are already unlocked.", nil end
 	local index = base.Unlocked + 1
 	local price = Config.StandPrices[index]
 	local coins = p:GetAttribute("Coins") or 0
-	if coins < price then return false, "Потрібно ще " .. (price - coins) .. " мон.", nil end
+	if coins < price then return false, "You need " .. (price - coins) .. " coins", nil end
 	p:SetAttribute("Coins", coins - price); base.Unlocked = index
 	refreshStand(base, index, Workspace:GetServerTimeNow())
 	if index < Config.MaxStands then refreshStand(base, index + 1, Workspace:GetServerTimeNow()) end
 	refreshStats(base)
-	return true, "Нову підставку відкрито!", index
+	return true, "New stand unlocked!", index
 end
 local function place(p: Player, base: Base, index: number, findId: string): (boolean, string)
 	local s, f = base.Stands[index], Finds.ById[findId]
-	if not s or index > base.Unlocked then return false, "Спочатку відкрий підставку." end
-	if s.FindId or s.CharacterId then return false, "Підставка вже зайнята." end
-	if not f then return false, "Обери знахідку з каталогу." end
+	if not s or index > base.Unlocked then return false, "Unlock this stand first." end
+	if s.FindId or s.CharacterId then return false, "This stand is occupied." end
+	if not f then return false, "Choose a find from the catalogue." end
 	local coins = p:GetAttribute("Coins") or 0
-	if coins < f.Price then return false, "Потрібно ще " .. (f.Price - coins) .. " мон." end
+	if coins < f.Price then return false, "You need " .. (f.Price - coins) .. " coins" end
 	p:SetAttribute("Coins", coins - f.Price)
 	s.FindId = findId; s.ReadyAt = Workspace:GetServerTimeNow() + f.OpenSeconds; s.Notified = false
 	local display = CollectionAssets.Container(findId, s.Position)
 	display.Parent = s.Model; s.Display = display
 	refreshStand(base, index, Workspace:GetServerTimeNow()); refreshStats(base)
-	return true, f.Name .. " на підставці. Відкрий через " .. f.OpenSeconds .. " с."
+	return true, f.Name .. " placed. Open in " .. f.OpenSeconds .. " s."
 end
 local function open(p: Player, base: Base, index: number): (boolean, string)
 	local s = base.Stands[index]
-	if not s or index > base.Unlocked or not s.FindId then return false, "На підставці немає закритої знахідки." end
-	if Workspace:GetServerTimeNow() < s.ReadyAt then return false, "Знахідка ще розпаковується." end
+	if not s or index > base.Unlocked or not s.FindId then return false, "There is no sealed find on this stand." end
+	if Workspace:GetServerTimeNow() < s.ReadyAt then return false, "This find is still unpacking." end
 	local f = Finds.AllById[s.FindId]
 	local roll, total = random:NextInteger(1, 100), 0
 	local id = f.Drops[#f.Drops].Id
@@ -162,18 +162,18 @@ local function open(p: Player, base: Base, index: number): (boolean, string)
 	refreshStand(base, index, Workspace:GetServerTimeNow()); refreshStats(base)
 	LevelService.AddXP(p, Config.OpenXP)
 	showCharacter:FireClient(p, id, index, true)
-	return true, "Твій новий персонаж: " .. Finds.CharacterById[id].Name .. "!"
+	return true, "Meet your new companion: " .. Finds.CharacterById[id].Name .. "!"
 end
 local function sell(p: Player, base: Base, index: number): (boolean, string)
 	local s = base.Stands[index]
-	if not s or index > base.Unlocked or not s.CharacterId then return false, "На підставці немає персонажа." end
+	if not s or index > base.Unlocked or not s.CharacterId then return false, "There is no companion on this stand." end
 	local c = Finds.CharacterById[s.CharacterId]
 	s.CharacterId = nil; s.NextIncome = 0
 	if s.Display then s.Display:Destroy() end
 	s.Display = nil
 	p:SetAttribute("Coins", (p:GetAttribute("Coins") or 0) + c.SellPrice)
 	refreshStand(base, index, Workspace:GetServerTimeNow()); refreshStats(base)
-	return true, "Персонажа продано. +" .. c.SellPrice .. " мон. Підставка вільна."
+	return true, "Companion sold. +" .. c.SellPrice .. " coins. Stand is now free."
 end
 local function decorate(base: Model, at: Vector3)
 	part(base, "CollectorLawn", Vector3.new(88, 0.5, 100), at + Vector3.new(0, 0.35, 0), Theme.Grass, Enum.Material.Grass, true)
@@ -189,14 +189,14 @@ local function decorate(base: Model, at: Vector3)
 	end
 	part(base, "WorkshopDoor", Vector3.new(6.3, 6.8, 0.3), shed + Vector3.new(0, 3.5, 7.1), Theme.Wood, Enum.Material.WoodPlanks)
 	local workshopSign = part(base, "WorkshopSign", Vector3.new(13, 2, 0.3), shed + Vector3.new(0, 8, 7.3), Theme.Iron)
-	Assets.Sign(workshopSign, "Дім знахідок")
+	Assets.Sign(workshopSign, "Finders' Workshop")
 	Assets.Cobweb(base, shed + Vector3.new(-9.8, 7.8, 7.4), 3.4)
 	part(base, "Workbench", Vector3.new(11, 0.65, 4.5), at + Vector3.new(0, 3.2, -27), Theme.WoodLight, Enum.Material.WoodPlanks, true)
 	for _, x in {-4.3, 4.3} do part(base, "TableLeg", Vector3.new(0.7, 2.5, 3.5), at + Vector3.new(x, 1.7, -27), Theme.Wood, Enum.Material.Wood, true) end
 	part(base, "UnfoldedMap", Vector3.new(4, 0.08, 2.7), at + Vector3.new(-1, 3.6, -27), Theme.Paper)
 	for _, x in {2, 3.5} do part(base, "OldBook", Vector3.new(1.3, 0.3, 1.8), at + Vector3.new(x, 3.6, -27), Theme.Barn) end
 	local how = part(base, "HowToBoard", Vector3.new(14, 4, 0.5), at + Vector3.new(23, 5, -36), Theme.Wood, Enum.Material.Wood)
-	Assets.Sign(how, "Твоя колекція", "Знахідка → відкриття → персонаж → монети")
+	Assets.Sign(how, "Your Collection", "Find → open → companion → coins")
 	for _, x in {17, 29} do part(base, "BoardPost", Vector3.new(0.7, 5, 0.7), at + Vector3.new(x, 2.5, -36), Theme.Wood) end
 	for _, side in {-1, 1} do
 		for z = -48, 48, 12 do part(base, "FencePost", Vector3.new(0.8, 4, 0.8), at + Vector3.new(side * 43, 2.5, z), Theme.WoodLight, Enum.Material.Wood, true) end
@@ -220,7 +220,7 @@ local function createBase(index: number, root: Folder): Base
 	model.Name = "Base_" .. index; model:SetAttribute("OwnerUserId", 0); model.Parent = root
 	decorate(model, at)
 	local board = part(model, "BaseName", Vector3.new(14, 2.6, 0.5), at + Vector3.new(-24, 4.3, 42), Theme.Wood, Enum.Material.Wood)
-	local base: Base = { Index = index, Model = model, Owner = nil, Unlocked = Config.StartingStands, Stands = {}, Sign = Assets.Sign(board, "Вільна база") }
+	local base: Base = { Index = index, Model = model, Owner = nil, Unlocked = Config.StartingStands, Stands = {}, Sign = Assets.Sign(board, "Unclaimed Base") }
 	local folder = Instance.new("Folder")
 	folder.Name = "Stands"; folder.Parent = model
 	-- Curved display arrangement, not rectangular planting beds.
@@ -271,7 +271,7 @@ local function assign(p: Player)
 	for _, base in bases do
 		if base.Owner then continue end
 		base.Owner = p; playerBases[p] = base; base.Model:SetAttribute("OwnerUserId", p.UserId)
-		base.Sign.Text = "Колекція " .. p.DisplayName
+		base.Sign.Text = "Collection: " .. p.DisplayName
 		p:SetAttribute("BaseIndex", base.Index); p:SetAttribute("Coins", Config.StartingCoins)
 		refreshStats(base)
 		p.CharacterAdded:Connect(function(character) task.defer(moveHome, p, character) end)
@@ -286,7 +286,7 @@ local function release(p: Player)
 	if not base then return end
 	playerBases[p] = nil; base.Owner = nil; base.Unlocked = Config.StartingStands
 	base.Model:SetAttribute("OwnerUserId", 0); base.Model:SetAttribute("UnlockedStands", Config.StartingStands)
-	base.Sign.Text = "Вільна база"
+	base.Sign.Text = "Unclaimed Base"
 	for index, s in base.Stands do
 		if s.Display then s.Display:Destroy() end
 		s.Display, s.FindId, s.CharacterId = nil, nil, nil
@@ -306,11 +306,11 @@ function PlotService.Init()
 	request.Name = "Request"; request.Parent = remotes
 	request.OnServerInvoke = function(p: Player, action: any, index: any, findId: any)
 		local base = playerBases[p]
-		if not base or not onBase(p, base) then return { ok = false, message = "Повернися на свою базу." } end
-		if not allowRequest(p) then return { ok = false, message = "Зачекай мить." } end
+		if not base or not onBase(p, base) then return { ok = false, message = "Return to your base." } end
+		if not allowRequest(p) then return { ok = false, message = "Please wait a moment." } end
 		if action == "Unlock" then local ok, message, standIndex = unlock(p, base); return { ok = ok, message = message, standIndex = standIndex } end
-		if typeof(index) ~= "number" or index ~= index or index < 1 or index > Config.MaxStands or index ~= math.floor(index) then return { ok = false, message = "Обери підставку на своїй базі." } end
-		local ok, message = false, "Обери дію в каталозі."
+		if typeof(index) ~= "number" or index ~= index or index < 1 or index > Config.MaxStands or index ~= math.floor(index) then return { ok = false, message = "Choose a stand on your base." } end
+		local ok, message = false, "Choose an action in the catalogue."
 		if action == "Place" and typeof(findId) == "string" then ok, message = place(p, base, index, findId)
 		elseif action == "Open" then ok, message = open(p, base, index)
 		elseif action == "Sell" then ok, message = sell(p, base, index) end
@@ -332,7 +332,7 @@ function PlotService.Init()
 				for index, s in base.Stands do
 					if s.FindId then
 						refreshStand(base, index, now)
-						if now >= s.ReadyAt and not s.Notified then s.Notified = true; changed = true; feedback:FireClient(owner, "Знахідка готова! Натисни «Відкрити» на підставці.", true) end
+						if now >= s.ReadyAt and not s.Notified then s.Notified = true; changed = true; feedback:FireClient(owner, "Your find is ready! Use Open at its stand.", true) end
 					elseif s.CharacterId and now >= s.NextIncome then
 						local periods = math.floor((now - s.NextIncome) / Config.IncomeInterval) + 1
 						earned += Finds.CharacterById[s.CharacterId].Income * periods

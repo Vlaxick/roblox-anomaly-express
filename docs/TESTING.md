@@ -1,5 +1,47 @@
 # Collector courtyard validation
 
+## 2026-10-18: English UI, Central Station and lobby activities
+
+Live single-client Studio checks with Rojo connected:
+
+- The default game text, base prompts, catalogue, companions, errors and archived
+  event names are English. A source scan found no remaining Cyrillic game strings.
+- The new station constructs with four numbered gates, a glass vaulted hall,
+  platform, parked train and connected residential lanes. The departure board
+  explicitly says that expedition routes are still in development.
+- HUD travel rejects arbitrary activity destinations; Station travel works and
+  the physical gate prompts start their matching activities.
+- Circuit Run completed by walking across its six actual pressure plates in time;
+  the first clear awarded exactly 15 coins and 8 XP.
+- Memory Room presents a four-number pattern. A wrong step resets the attempt;
+  staying on that plate for six seconds does not repeatedly trigger it. Correct
+  steps complete the activity and award 20 coins / 10 XP.
+- A second Memory clear during its 90-second reward cooldown awarded no further
+  coins or XP, while still allowing practice. The HUD countdown updates live.
+- All twelve obby platforms were reached using Humanoid movement and jumps,
+  with temporary server-owned physics for a repeatable test. An injected fall at
+  stage five returned to its saved checkpoint; completion awarded 25 coins and
+  recorded a best time. The earlier centre-to-centre client test was not used as
+  proof of jump feasibility; the passing route approaches platform edges first.
+- Pressure inputs are once per visit, with server-side position, order, timer and
+  activity checks. Test commands and physics ownership changes are Play-only
+  fixtures; stopping the session discards them.
+- A fresh restart retained the normal 40-coin balance. Activity text and >=44px
+  buttons fit both 375 × 400 and 801 × 413 GUI safe areas. The Roblox player list
+  hides during an activity and restores afterwards.
+- Letting Circuit Run expire cancelled it without a reward. Gate 04 reached the
+  platform, Home returned to the assigned base with base actions visible, and
+  Station returned to the entrance.
+
+Output markers: `CITY_CIRCUIT_WALK_REWARD_PASS`, `CITY_MEMORY_STEP_EDGE_PASS`,
+`CITY_MEMORY_REWARD_PASS`, `CITY_REWARD_COOLDOWN_PASS`,
+`CITY_OBBY_CHECKPOINT_PASS`, `CITY_OBBY_PHYSICS_CLEAR_PASS`,
+`CITY_FRESH_ENGLISH_LAYOUT_PASS`, `CITY_TIMEOUT_PLATFORM_HOME_PASS`.
+
+These checks are not a multiplayer contention/load test or a real mobile-device
+test. Train departures, expedition recovery, shop interiors and persistent saves
+remain outside this milestone.
+
 ## 2026-10-18: permanent loot and overlapping labels
 
 Live Studio checks with the event setting left empty:
