@@ -10,6 +10,8 @@ local Theme = require(ReplicatedStorage.Shared.Config.Theme)
 local Config = require(ReplicatedStorage.Shared.Config.GameConfig)
 local Finds = require(ReplicatedStorage.Shared.Config.Finds)
 local Assets = require(ReplicatedStorage.Shared.CollectionAssets)
+local StandPresentation = require(script.Parent.StandPresentation)
+StandPresentation.Init()
 local remotes = ReplicatedStorage:WaitForChild("CollectionRemotes")
 local request = remotes:WaitForChild("Request") :: RemoteFunction
 local openMenu = remotes:WaitForChild("OpenCatalogue") :: RemoteEvent
@@ -103,7 +105,7 @@ backdrop.BorderSizePixel = 0; backdrop.Modal = true; backdrop.Selectable = false
 local catalogue = frame(overlay, "FindCatalogue", Theme.UIBackground, 14)
 catalogue.AnchorPoint = Vector2.new(0.5, 0.5); catalogue.Position = UDim2.fromScale(0.5, 0.5); catalogue.Active = true
 local border = Instance.new("UIStroke"); border.Color = Theme.UIBorder; border.Thickness = 3; border.Parent = catalogue
-local title = text(catalogue, "Title", "Таємничі знахідки", 26, Theme.UIText, Enum.Font.FredokaOne)
+local title = text(catalogue, "Title", "Знахідки експедицій", 26, Theme.UIText, Enum.Font.FredokaOne)
 local subtitle = text(catalogue, "Subtitle", "", 14, Theme.UISecondary); subtitle.TextWrapped = true
 local closeButton = button(catalogue, "CloseCatalogue", "×"); closeButton.TextSize = 26; closeButton.BackgroundColor3 = Theme.UISurface
 local list = Instance.new("ScrollingFrame")
@@ -119,7 +121,8 @@ for _, find in Finds.List do
 	local row = frame(list, find.Id, Theme.UISurface, 10)
 	local v = preview(row); setPreview(v, Assets.Container(find.Id, Vector3.zero))
 	local name = text(row, "FindName", find.Name, 18, Theme.UIText, Enum.Font.GothamBold); name.TextWrapped = true
-	local rarity = text(row, "Rarity", find.Rarity, 13, find.Color, Enum.Font.GothamBold)
+	local rarityName = find.Rarity .. (Finds.FindCollectionById[find.Id] == "Permanent" and "" or " · Івент")
+	local rarity = text(row, "Rarity", rarityName, 13, find.Color, Enum.Font.GothamBold)
 	local stats = text(row, "Stats", "Розпакування: " .. find.OpenSeconds .. " с", 13, Theme.UISecondary)
 	local lines = {}
 	for _, drop in find.Drops do
@@ -148,6 +151,12 @@ local revealIncome = text(reveal, "Income", "", 16, Theme.Harvest, Enum.Font.Got
 for _, t in {revealTitle, revealRarity, revealName, revealIncome} do t.TextXAlignment = Enum.TextXAlignment.Center end
 local keepButton = button(reveal, "Keep", "На базу")
 local sellButton = button(reveal, "Sell", "Продати"); sellButton.BackgroundColor3 = Theme.UISurface
+
+local function syncWorldPresentation()
+	StandPresentation.SetModalOpen(overlay.Visible or revealOverlay.Visible)
+end
+overlay:GetPropertyChangedSignal("Visible"):Connect(syncWorldPresentation)
+revealOverlay:GetPropertyChangedSignal("Visible"):Connect(syncWorldPresentation)
 
 local toast = frame(screen, "Toast", Theme.UIBackground, 10)
 toast.AnchorPoint = Vector2.new(0.5, 0); toast.ZIndex = 30; toast.Visible = false
@@ -204,7 +213,7 @@ end
 refreshShop = function()
 	local coins, slots = player:GetAttribute("Coins") or 0, player:GetAttribute("BaseSlots") or Config.StartingStands
 	selectedStand = findStand("Empty", selectedStand)
-	subtitle.Text = errorMessage or (selectedStand and ("Підставка " .. selectedStand .. " · У тебе " .. coins .. " мон.") or "Немає місця. Додай підставку або продай персонажа.")
+	subtitle.Text = errorMessage or (selectedStand and (Finds.Label .. " · Підставка " .. selectedStand .. " · " .. coins .. " мон.") or "Немає місця. Додай підставку або продай персонажа.")
 	subtitle.TextColor3 = errorMessage and Theme.Error or Theme.UISecondary
 	for _, card in cards do
 		local f = Finds.ById[card.Id]

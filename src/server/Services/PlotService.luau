@@ -32,6 +32,7 @@ local function plaque(anchor: BasePart): (BillboardGui, TextLabel, TextLabel, Te
 	gui.Name = "StandLabel"; gui.Size = UDim2.fromOffset(170, 74)
 	gui.StudsOffset = Vector3.new(0, 1.5, 0); gui.MaxDistance = 28
 	gui.AlwaysOnTop = true
+	gui.Enabled = false -- Client chooses distant label vs nearby prompt.
 	gui.Parent = anchor
 	local panel = Instance.new("Frame")
 	panel.Size = UDim2.fromScale(1, 1); panel.BackgroundColor3 = Theme.UIBackground
@@ -55,22 +56,24 @@ local function refreshStand(base: Base, index: number, now: number)
 	s.Model:SetAttribute("CharacterId", s.CharacterId or "")
 	s.Model:SetAttribute("ReadyAt", s.ReadyAt)
 	s.Platform.Color = unlocked and Theme.Wood or Theme.Stone:Lerp(Theme.Iron, 0.45)
-	s.Label.Enabled = unlocked or index == base.Unlocked + 1
+	s.Label:SetAttribute("VisibleAtRest", unlocked or index == base.Unlocked + 1)
 	s.Prompt.Enabled = unlocked or index == base.Unlocked + 1
 	s.Prompt.ObjectText = "Підставка " .. index
 	if s.CharacterId then
 		local c = Finds.CharacterById[s.CharacterId]
 		s.Title.Text = c.Name; s.Rarity.Text = c.Rarity; s.Rarity.TextColor3 = c.Color
 		s.Status.Text = "+" .. c.Income .. " мон. / " .. Config.IncomeInterval .. " с"
-		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Персонаж"
+		s.Status.TextColor3 = Theme.Harvest; s.Prompt.ActionText = "Оглянути"
+		s.Prompt.ObjectText = c.Name .. " · +" .. c.Income .. " / " .. Config.IncomeInterval .. " с"
 		s.Model:SetAttribute("State", "Occupied")
 	elseif s.FindId then
-		local f = Finds.ById[s.FindId]
+		local f = Finds.AllById[s.FindId]
 		local ready = now >= s.ReadyAt
 		s.Title.Text = f.Name; s.Rarity.Text = f.Rarity .. " знахідка"; s.Rarity.TextColor3 = f.Color
 		s.Status.Text = ready and "Готово! Відкрий" or ("Розпакування · " .. math.max(0, math.ceil(s.ReadyAt - now)) .. " с")
 		s.Status.TextColor3 = ready and Theme.Harvest or Theme.UISecondary
 		s.Prompt.Enabled = ready; s.Prompt.ActionText = "Відкрити"
+		s.Prompt.ObjectText = f.Name
 		s.Model:SetAttribute("State", ready and "Ready" or "Sealed")
 	elseif unlocked then
 		s.Title.Text = "Вільна підставка"; s.Rarity.Text = "Постав сюди знахідку"
@@ -146,7 +149,7 @@ local function open(p: Player, base: Base, index: number): (boolean, string)
 	local s = base.Stands[index]
 	if not s or index > base.Unlocked or not s.FindId then return false, "На підставці немає закритої знахідки." end
 	if Workspace:GetServerTimeNow() < s.ReadyAt then return false, "Знахідка ще розпаковується." end
-	local f = Finds.ById[s.FindId]
+	local f = Finds.AllById[s.FindId]
 	local roll, total = random:NextInteger(1, 100), 0
 	local id = f.Drops[#f.Drops].Id
 	for _, drop in f.Drops do total += drop.Weight; if roll <= total then id = drop.Id; break end end

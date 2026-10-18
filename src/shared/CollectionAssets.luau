@@ -1,103 +1,119 @@
 --!strict
 
 local Base = require(script.Parent.FarmAssets)
-local Theme = require(script.Parent.Config.Theme)
+local Catalog = require(script.Parent.Config.Finds)
 local Assets = {}
-local cream = Theme.Paper
-local gold = Theme.Harvest
-local iron = Theme.Iron
-local plum = Color3.fromRGB(110, 82, 119)
 
-local function part(parent: Instance, name: string, size: Vector3, pos: Vector3, color: Color3, material: Enum.Material?): Part
-	return Base.Part(parent, name, size, CFrame.new(pos), color, material)
+-- Expedition materials, deliberately independent of the autumn/Halloween theme.
+local ink = Color3.fromRGB(53, 63, 74)
+local brass = Color3.fromRGB(203, 169, 106)
+local sage = Color3.fromRGB(113, 148, 119)
+local blue = Color3.fromRGB(92, 143, 159)
+local cream = Color3.fromRGB(232, 228, 217)
+local stone = Color3.fromRGB(120, 135, 135)
+
+local function part(m: Instance, name: string, size: Vector3, at: Vector3, color: Color3, material: Enum.Material?): Part
+	return Base.Part(m, name, size, CFrame.new(at), color, material)
 end
-local function ball(parent: Instance, name: string, size: Vector3, pos: Vector3, color: Color3): Part
-	local p = part(parent, name, size, pos, color)
+local function ball(m: Instance, name: string, size: Vector3, at: Vector3, color: Color3, material: Enum.Material?): Part
+	local p = part(m, name, size, at, color, material)
 	p.Shape = Enum.PartType.Ball
 	return p
 end
-local function rod(parent: Instance, name: string, from: Vector3, to: Vector3, width: number, color: Color3)
-	return Base.Part(parent, name, Vector3.new(width, width, (to - from).Magnitude), CFrame.lookAt((from + to) / 2, to), color, Enum.Material.Metal)
+local function rod(m: Instance, name: string, from: Vector3, to: Vector3, width: number, color: Color3)
+	return Base.Part(m, name, Vector3.new(width, width, (to - from).Magnitude), CFrame.lookAt((from + to) / 2, to), color, Enum.Material.Metal)
 end
-local function disc(parent: Instance, name: string, radius: number, height: number, pos: Vector3, color: Color3): Part
-	local p = Base.Part(parent, name, Vector3.new(height, radius * 2, radius * 2), CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2), color, Enum.Material.Metal)
+local function disc(m: Instance, name: string, radius: number, depth: number, at: Vector3, color: Color3, front: boolean?): Part
+	local p = part(m, name, Vector3.new(depth, radius * 2, radius * 2), at, color, Enum.Material.Metal)
 	p.Shape = Enum.PartType.Cylinder
+	p.CFrame *= front and CFrame.Angles(0, math.pi / 2, 0) or CFrame.Angles(0, 0, math.pi / 2)
 	return p
 end
-local function ring(parent: Instance, name: string, center: Vector3, radius: number, width: number, color: Color3, vertical: boolean?)
-	for i = 1, 20 do
-		local a, b = (i - 1) * math.pi / 10, i * math.pi / 10
-		local function point(t: number): Vector3
-			return center + (vertical and Vector3.new(math.cos(t), math.sin(t), 0) or Vector3.new(math.cos(t), 0, math.sin(t))) * radius
-		end
-		rod(parent, name, point(a), point(b), width, color)
+local function ring(m: Instance, name: string, at: Vector3, radius: number, width: number, color: Color3, rotation: CFrame?)
+	local cf = CFrame.new(at) * (rotation or CFrame.new())
+	for i = 1, 16 do
+		local a, b = (i - 1) * math.pi / 8, i * math.pi / 8
+		rod(m, name, cf:PointToWorldSpace(Vector3.new(math.cos(a), 0, math.sin(a)) * radius), cf:PointToWorldSpace(Vector3.new(math.cos(b), 0, math.sin(b)) * radius), width, color)
 	end
 end
-local function eyes(parent: Instance, at: Vector3, spacing: number, color: Color3?)
+local function wedge(m: Instance, name: string, size: Vector3, cf: CFrame, color: Color3): WedgePart
+	local p = Instance.new("WedgePart")
+	p.Name = name; p.Size = size; p.CFrame = cf; p.Color = color
+	p.Material = Enum.Material.SmoothPlastic; p.Anchored = true; p.CanCollide = false; p.Parent = m
+	return p
+end
+local function crystal(m: Instance, at: Vector3, size: number, color: Color3)
+	local facet = Instance.new("CornerWedgePart")
+	facet.Name = "CrystalFacet"
+	facet.Size = Vector3.new(size, size * 2, size)
+	facet.CFrame = CFrame.new(at) * CFrame.Angles(0, math.pi / 4, -0.12)
+	facet.Color = color; facet.Material = Enum.Material.SmoothPlastic
+	facet.Anchored = true; facet.CanCollide = false; facet.Parent = m
+end
+local function eyes(m: Instance, at: Vector3, spacing: number)
 	for _, side in {-1, 1} do
-		ball(parent, "Eye", Vector3.new(0.35, 0.5, 0.2), at + Vector3.new(side * spacing, 0, 0), color or iron)
+		ball(m, "EyeWhite", Vector3.new(0.62, 0.75, 0.2), at + Vector3.new(side * spacing, 0, 0), cream)
+		ball(m, "Pupil", Vector3.new(0.29, 0.42, 0.14), at + Vector3.new(side * spacing, -0.02, 0.14), ink)
+		ball(m, "Catchlight", Vector3.new(0.09, 0.1, 0.07), at + Vector3.new(side * spacing - 0.06, 0.09, 0.22), cream)
 	end
 end
-local function finish(model: Model, id: string, at: Vector3): Model
-	model.Name = id
-	model.WorldPivot = CFrame.new()
-	model:PivotTo(CFrame.new(at))
-	return model
+local function finish(m: Model, id: string, at: Vector3): Model
+	m.Name = id; m.WorldPivot = CFrame.new(); m:PivotTo(CFrame.new(at))
+	return m
+end
+local function eventAssets()
+	-- Event art remains renderable for already-owned residents, even when new
+	-- event finds are unavailable. Never use this to decide acquisition eligibility.
+	return require(script.Parent.EventAssets.HalloweenAssets)
 end
 
 function Assets.Container(id: string, at: Vector3): Model
+	if Catalog.FindCollectionById[id] == "Halloween" then return eventAssets().Container(id, at) end
 	local m = Instance.new("Model")
-	if id == "LostSatchel" then
-		-- A soft, bulging station bag, with straps, ticket and a loop handle.
-		ball(m, "CanvasBag", Vector3.new(5.8, 3.6, 3.3), Vector3.new(0, 2, 0), Theme.Wood)
-		ball(m, "LeatherFlap", Vector3.new(5.3, 1.8, 3.5), Vector3.new(0, 3, 0.1), Theme.Barn)
-		for _, x in {-1.7, 1.7} do
-			part(m, "LeatherStrap", Vector3.new(0.5, 3.3, 0.17), Vector3.new(x, 2.2, 1.66), iron)
-			part(m, "Buckle", Vector3.new(0.8, 0.65, 0.22), Vector3.new(x, 2.1, 1.8), gold, Enum.Material.Metal)
-		end
-		ring(m, "BagHandle", Vector3.new(0, 4, 0), 0.8, 0.24, iron, true)
-		local tag = part(m, "StationTicket", Vector3.new(1, 1.55, 0.12), Vector3.new(2.2, 3.2, 1.65), cream)
-		tag.CFrame *= CFrame.Angles(0, 0, -0.25)
-		part(m, "TicketStripe", Vector3.new(0.72, 0.15, 0.14), Vector3.new(2.2, 3.25, 1.74), Theme.Rust)
-	elseif id == "WhisperCage" then
-		disc(m, "CageFoot", 2.6, 0.5, Vector3.new(0, 0.4, 0), iron)
-		for i = 1, 12 do
-			local a = i * math.pi / 6
-			local p = Vector3.new(math.cos(a) * 2.3, 0.6, math.sin(a) * 2.3)
-			rod(m, "CageBar", p, p + Vector3.new(0, 4.5, 0), 0.15, iron)
-			rod(m, "DomedBar", p + Vector3.new(0, 4.5, 0), Vector3.new(0, 6.1, 0), 0.16, iron)
-		end
-		for _, y in {0.8, 4.9} do ring(m, "CageHoop", Vector3.new(0, y, 0), 2.3, 0.2, gold) end
-		ring(m, "HangingLoop", Vector3.new(0, 6.65, 0), 0.6, 0.18, gold, true)
-		ball(m, "WrappedWhisper", Vector3.new(2.1, 2.5, 2), Vector3.new(0, 2.3, 0), Theme.Ghost)
-		part(m, "WaxSeal", Vector3.new(0.9, 1.2, 0.25), Vector3.new(0, 2.9, 2.5), Theme.Barn)
-	elseif id == "ThornCocoon" then
-		ball(m, "SilkCocoon", Vector3.new(4.6, 6.8, 4.5), Vector3.new(0, 3.7, 0), plum)
-		for i = 1, 7 do
-			local y = 0.8 + i * 0.77
-			local radius = math.sqrt(math.max(0.15, 1 - ((y - 3.7) / 3.6)^2)) * 2.35
-			ring(m, "SilkBinding", Vector3.new(0, y, 0), radius, 0.13, Theme.Ghost)
-		end
+	if id == "TravelCase" then
+		ball(m, "CanvasCase", Vector3.new(5.7, 3.7, 3.3), Vector3.new(0, 2, 0), blue)
+		ball(m, "LeatherFlap", Vector3.new(5.4, 1.3, 3.35), Vector3.new(0, 3.1, 0.1), ink)
 		for _, side in {-1, 1} do
-			rod(m, "ThornStem", Vector3.new(side * 2.9, 0.2, 0), Vector3.new(side * 1.1, 6.6, 0), 0.45, Theme.Wood)
-			for y = 1, 4 do
-				rod(m, "Thorn", Vector3.new(side * (2.9 - y * 0.25), y, 0), Vector3.new(side * (4 - y * 0.2), y + 0.8, 0), 0.23, iron)
-			end
+			part(m, "TravelStrap", Vector3.new(0.5, 3.1, 0.16), Vector3.new(side * 1.7, 2, 1.68), brass)
+			part(m, "Buckle", Vector3.new(0.78, 0.6, 0.2), Vector3.new(side * 1.7, 2.3, 1.8), cream, Enum.Material.Metal)
 		end
-		ball(m, "CocoonSeal", Vector3.new(1.3, 1.3, 0.25), Vector3.new(0, 3.6, 2.4), Theme.Barn)
-	elseif id == "MoonSeal" then
-		disc(m, "RelicFoot", 2.6, 0.5, Vector3.new(0, 0.4, 0), iron)
-		rod(m, "RelicStem", Vector3.new(0, 0.5, 0), Vector3.new(0, 1.9, 0), 0.55, gold)
-		-- Open crescent silhouette: intentionally not a rectangular treasure chest.
-		for i = 1, 18 do
-			local a = math.rad(55 + (i - 1) * 250 / 18)
-			local b = math.rad(55 + i * 250 / 18)
-			rod(m, "MoonCrescent", Vector3.new(math.cos(a) * 2.8, 4.7 + math.sin(a) * 2.8, 0), Vector3.new(math.cos(b) * 2.8, 4.7 + math.sin(b) * 2.8, 0), 0.62, gold)
+		ring(m, "CarryHandle", Vector3.new(0, 4, 0), 0.75, 0.23, ink, CFrame.Angles(math.pi / 2, 0, 0))
+		local ticket = part(m, "StationTicket", Vector3.new(1, 1.6, 0.13), Vector3.new(2, 3, 1.76), cream)
+		ticket.CFrame *= CFrame.Angles(0, 0, -0.17)
+		part(m, "TicketMark", Vector3.new(0.65, 0.18, 0.15), Vector3.new(2, 3, 1.85), blue)
+	elseif id == "TrailCapsule" then
+		disc(m, "CapsuleFoot", 2.3, 0.45, Vector3.new(0, 0.35, 0), ink)
+		ball(m, "EnamelShell", Vector3.new(4.5, 5.7, 4.2), Vector3.new(0, 3.2, 0), sage)
+		for _, y in {1.3, 4.8} do ring(m, "ReinforcingBand", Vector3.new(0, y, 0), 1.9, 0.23, brass) end
+		disc(m, "RoundHatch", 1.3, 0.25, Vector3.new(0, 3.2, 2.05), ink, true)
+		disc(m, "HatchFace", 1, 0.28, Vector3.new(0, 3.2, 2.2), cream, true)
+		for _, angle in {0, math.pi / 2} do
+			local lock = part(m, "HatchLatch", Vector3.new(1.5, 0.23, 0.2), Vector3.new(0, 3.2, 2.4), brass)
+			lock.CFrame *= CFrame.Angles(0, 0, angle)
 		end
-		rod(m, "Suspension", Vector3.new(0, 7.4, 0), Vector3.new(0, 5.7, 0), 0.1, gold)
-		ball(m, "SealedPearl", Vector3.new(2.7, 3.3, 2.7), Vector3.new(0, 4.3, 0), cream)
-		ring(m, "PearlSeal", Vector3.new(0, 4.3, 0), 1.5, 0.22, plum)
-		ball(m, "WaxMoon", Vector3.new(0.8, 0.8, 0.2), Vector3.new(0, 4.4, 1.42), Theme.Barn)
+		ring(m, "CapsuleHandle", Vector3.new(0, 6.2, 0), 0.6, 0.23, ink, CFrame.Angles(math.pi / 2, 0, 0))
+	elseif id == "PrismGeode" then
+		ball(m, "SealedStone", Vector3.new(5.3, 5.3, 4.8), Vector3.new(0, 2.8, 0), stone, Enum.Material.Slate)
+		for i = 1, 6 do
+			local a = i * math.pi / 3
+			local p = part(m, "RockFacet", Vector3.new(2.6, 2.8, 3.7), Vector3.new(math.cos(a) * 1.3, 2.7 + math.sin(a) * 1.4, 0), stone:Lerp(ink, i % 3 * 0.12), Enum.Material.Slate)
+			p.CFrame *= CFrame.Angles(0, 0, a)
+		end
+		for _, p in {Vector3.new(-1.8, 3.6, 1.5), Vector3.new(0, 4.5, 1.1), Vector3.new(1.6, 2.7, 1.9)} do crystal(m, p, 0.8, blue) end
+		ring(m, "GeodeBinding", Vector3.new(0, 2.8, 0), 2.8, 0.26, brass, CFrame.Angles(math.pi / 2, 0, 0))
+		disc(m, "SurveySeal", 0.55, 0.2, Vector3.new(0, 2.1, 2.6), brass, true)
+	elseif id == "AtlasSphere" then
+		for i = 1, 3 do
+			local a = i * math.pi * 2 / 3
+			rod(m, "TripodLeg", Vector3.new(0, 1.8, 0), Vector3.new(math.cos(a) * 2.5, 0.2, math.sin(a) * 2.5), 0.4, ink)
+		end
+		ball(m, "SealedGlobe", Vector3.new(4.4, 4.4, 4.4), Vector3.new(0, 4.1, 0), blue)
+		for _, r in {CFrame.new(), CFrame.Angles(math.pi / 2, 0, 0), CFrame.Angles(0, 0, math.pi / 3)} do ring(m, "NavigationRing", Vector3.new(0, 4.1, 0), 2.7, 0.23, brass, r) end
+		for i = 1, 7 do
+			local a = i * math.pi / 4
+			ball(m, "ConstellationPoint", Vector3.new(0.28, 0.28, 0.18), Vector3.new(math.cos(a) * 1.4, 4.1 + math.sin(a) * 1.4, 1.8), cream)
+		end
+		disc(m, "AtlasSeal", 0.55, 0.2, Vector3.new(0, 4.1, 2.25), brass, true)
 	else
 		error("Unknown container: " .. id)
 	end
@@ -105,87 +121,123 @@ function Assets.Container(id: string, at: Vector3): Model
 end
 
 function Assets.Character(id: string, at: Vector3): Model
-	if id == "WanderingLantern" or id == "MidnightClock" then return Base.Character(id, at) end
+	if Catalog.CharacterCollectionById[id] == "Halloween" then return eventAssets().Character(id, at) end
 	local m = Instance.new("Model")
-	if id == "Buttonling" then
-		ball(m, "SackBody", Vector3.new(2.5, 2.7, 1.9), Vector3.new(0, 2.1, 0), Theme.WoodLight)
-		ball(m, "SackHead", Vector3.new(2.8, 2.6, 2.1), Vector3.new(0, 4.5, 0), Theme.Panel)
+	if id == "Scrapling" then
+		part(m, "ToolBody", Vector3.new(2.4, 2.4, 1.8), Vector3.new(0, 2.3, 0), blue, Enum.Material.Metal)
+		part(m, "RobotHead", Vector3.new(2.8, 1.8, 1.8), Vector3.new(0, 4.3, 0), cream, Enum.Material.Metal)
 		for _, side in {-1, 1} do
-			ball(m, "Boot", Vector3.new(1.1, 0.8, 1.6), Vector3.new(side * 0.8, 0.5, 0.3), Theme.Barn)
-			ball(m, "Mitten", Vector3.new(0.85, 1.1, 0.9), Vector3.new(side * 1.7, 2.6, 0), Theme.WoodLight)
-			ball(m, "ButtonEye", Vector3.new(0.65, 0.65, 0.2), Vector3.new(side * 0.65, 4.8, 1), iron)
-			for _, dy in {-0.1, 0.1} do ball(m, "ButtonHole", Vector3.new(0.1, 0.1, 0.1), Vector3.new(side * 0.65, 4.8 + dy, 1.12), cream) end
+			ball(m, "Joint", Vector3.new(0.7, 0.7, 0.7), Vector3.new(side * 1.5, 3, 0), brass)
+			rod(m, "Arm", Vector3.new(side * 1.5, 3, 0), Vector3.new(side * 2.1, 2, 0.3), 0.35, ink)
+			part(m, "Hand", Vector3.new(0.7, 0.65, 0.65), Vector3.new(side * 2.1, 2, 0.3), cream)
+			part(m, "Boot", Vector3.new(1.1, 0.7, 1.5), Vector3.new(side * 0.75, 0.4, 0.3), ink)
+			rod(m, "Shin", Vector3.new(side * 0.75, 0.7, 0), Vector3.new(side * 0.75, 1.3, 0), 0.4, brass)
+			disc(m, "GoggleRim", 0.57, 0.2, Vector3.new(side * 0.7, 4.4, 0.95), brass, true)
 		end
-		for x = -0.6, 0.6, 0.3 do rod(m, "MouthStitch", Vector3.new(x, 3.9, 1), Vector3.new(x + 0.12, 4.13, 1), 0.07, iron) end
-		part(m, "Patch", Vector3.new(0.85, 0.9, 0.15), Vector3.new(0.4, 2.2, 1), Theme.Barn)
-	elseif id == "SockGhost" then
-		ball(m, "SockBody", Vector3.new(3, 4.2, 2.5), Vector3.new(0, 2.9, 0), cream)
-		ball(m, "CurledToe", Vector3.new(3.5, 1.4, 2.8), Vector3.new(0.8, 1.1, 0.25), cream)
-		for i = 1, 3 do ring(m, "SockStripe", Vector3.new(0, 3.85 + i * 0.26, 0), 1.38 - i * 0.13, 0.17, Theme.Barn) end
-		eyes(m, Vector3.new(0, 2.9, 1.2), 0.55)
-		ball(m, "LittleMouth", Vector3.new(0.4, 0.55, 0.13), Vector3.new(0, 2.1, 1.25), iron)
-		for _, side in {-1, 1} do ball(m, "WavingArm", Vector3.new(1.8, 0.75, 0.8), Vector3.new(side * 1.75, 2.8, 0), cream) end
-	elseif id == "RavenGuard" then
-		ball(m, "RavenBody", Vector3.new(3.4, 3.5, 2.8), Vector3.new(0, 2.8, 0), iron)
-		ball(m, "RavenHead", Vector3.new(2.9, 2.8, 2.7), Vector3.new(0, 5.1, 0.25), iron)
+		eyes(m, Vector3.new(0, 4.4, 1.1), 0.7)
+		part(m, "Smile", Vector3.new(0.75, 0.13, 0.13), Vector3.new(0, 3.8, 1), ink)
+		rod(m, "Antenna", Vector3.new(0.7, 5.2, 0), Vector3.new(1, 5.8, 0), 0.13, brass)
+		ball(m, "AntennaTip", Vector3.new(0.35, 0.35, 0.35), Vector3.new(1, 5.8, 0), blue)
+		part(m, "ToolPocket", Vector3.new(1.2, 0.9, 0.2), Vector3.new(0, 2.1, 1), brass)
+	elseif id == "Pebble" then
+		ball(m, "PebbleBody", Vector3.new(3.7, 3.7, 3.1), Vector3.new(0, 2.5, 0), stone, Enum.Material.Slate)
 		for _, side in {-1, 1} do
-			local wing = ball(m, "FoldedWing", Vector3.new(1.3, 3.4, 2.7), Vector3.new(side * 1.6, 3, -0.2), plum)
+			ball(m, "StoneFoot", Vector3.new(1.4, 0.9, 1.8), Vector3.new(side * 1, 0.5, 0.4), ink, Enum.Material.Slate)
+			ball(m, "StoneHand", Vector3.new(1.1, 1.1, 1), Vector3.new(side * 2, 2.2, 0.3), stone, Enum.Material.Slate)
+		end
+		eyes(m, Vector3.new(0, 2.8, 1.5), 0.7)
+		part(m, "Smile", Vector3.new(0.8, 0.15, 0.14), Vector3.new(0, 2, 1.55), ink)
+		for _, x in {-0.8, 0, 0.8} do crystal(m, Vector3.new(x, 4.3 + (x == 0 and 0.3 or 0), 0), 0.4, cream) end
+	elseif id == "MossTurtle" then
+		ball(m, "Shell", Vector3.new(5.6, 3.3, 4.8), Vector3.new(0, 2.1, -0.4), stone, Enum.Material.Slate)
+		ball(m, "ShellRim", Vector3.new(5.8, 0.7, 4.9), Vector3.new(0, 1.25, -0.4), brass)
+		for _, side in {-1, 1} do
+			for _, z in {-1.6, 1.3} do ball(m, "TurtleLeg", Vector3.new(1.4, 1.2, 1.6), Vector3.new(side * 2.1, 0.7, z), sage) end
+		end
+		ball(m, "TurtleHead", Vector3.new(2.5, 2, 2.4), Vector3.new(0, 1.7, 2.5), sage)
+		eyes(m, Vector3.new(0, 1.9, 3.65), 0.55)
+		for i = 1, 6 do
+			local a = i * math.pi / 3
+			ball(m, "MossPatch", Vector3.new(1.9, 0.4, 1.8), Vector3.new(math.cos(a) * 1.3, 3.4, -0.4 + math.sin(a)), sage)
+		end
+		ball(m, "MossCrown", Vector3.new(2, 0.5, 2), Vector3.new(0, 3.8, -0.4), sage:Lerp(cream, 0.15))
+	elseif id == "CourierBird" then
+		ball(m, "BirdBody", Vector3.new(3.1, 3.4, 2.6), Vector3.new(0, 2.6, 0), blue)
+		ball(m, "BirdHead", Vector3.new(2.8, 2.5, 2.5), Vector3.new(0, 4.8, 0.2), blue)
+		ball(m, "BirdBib", Vector3.new(2.2, 2.4, 0.35), Vector3.new(0, 2.7, 1.18), cream)
+		for _, side in {-1, 1} do
+			local wing = ball(m, "Wing", Vector3.new(1.25, 2.9, 2.2), Vector3.new(side * 1.5, 2.9, 0), blue:Lerp(ink, 0.25))
 			wing.CFrame *= CFrame.Angles(0, 0, side * 0.2)
-			for z = 0, 2 do rod(m, "BirdClaw", Vector3.new(side * 0.8, 0.7, 0), Vector3.new(side * 0.8 + (z - 1) * 0.3, 0.3, 1.1), 0.16, gold) end
+			rod(m, "BirdLeg", Vector3.new(side * 0.7, 1.1, 0), Vector3.new(side * 0.7, 0.35, 0.3), 0.2, brass)
+			ball(m, "BirdFoot", Vector3.new(0.8, 0.3, 1.3), Vector3.new(side * 0.7, 0.2, 0.5), brass)
 		end
-		eyes(m, Vector3.new(0, 5.35, 1.53), 0.63, gold)
-		ball(m, "RavenBeak", Vector3.new(0.9, 0.65, 1.5), Vector3.new(0, 4.8, 1.75), gold)
-		part(m, "GuardScarf", Vector3.new(3.1, 0.65, 2.8), Vector3.new(0, 4.1, 0.2), Theme.Barn)
-		part(m, "ScarfTail", Vector3.new(0.9, 2, 0.3), Vector3.new(1, 3.1, 1.5), Theme.Barn)
-	elseif id == "DuskMoth" then
+		eyes(m, Vector3.new(0, 5, 1.4), 0.6)
+		ball(m, "Beak", Vector3.new(0.8, 0.55, 1.2), Vector3.new(0, 4.45, 1.55), brass)
+		disc(m, "PostCap", 1.5, 0.45, Vector3.new(0, 6, 0.1), ink)
+		part(m, "CapVisor", Vector3.new(2.2, 0.2, 1.6), Vector3.new(0, 5.95, 1.1), ink)
+		local strap = part(m, "MailStrap", Vector3.new(0.3, 3.7, 0.2), Vector3.new(0, 3.2, 1.5), brass)
+		strap.CFrame *= CFrame.Angles(0, 0, -0.6)
+		part(m, "MailBag", Vector3.new(1.5, 1.3, 0.6), Vector3.new(1.5, 2.2, 1), brass)
+		part(m, "Letter", Vector3.new(0.9, 0.65, 0.1), Vector3.new(1.5, 2.5, 1.35), cream)
+	elseif id == "PrismFox" then
+		ball(m, "FoxBody", Vector3.new(3.1, 2.5, 3.9), Vector3.new(0, 2.3, -0.3), blue)
+		ball(m, "FoxHead", Vector3.new(3, 2.7, 2.6), Vector3.new(0, 4.1, 1), blue:Lerp(cream, 0.15))
 		for _, side in {-1, 1} do
-			local wing = ball(m, "UpperWing", Vector3.new(4.5, 4.6, 0.55), Vector3.new(side * 2.3, 4.4, -0.2), plum)
-			wing.CFrame *= CFrame.Angles(0, 0, -side * 0.35)
-			ball(m, "LowerWing", Vector3.new(3.4, 3, 0.5), Vector3.new(side * 2, 1.9, -0.1), Theme.Barn)
-			ball(m, "WingEye", Vector3.new(1.55, 1.8, 0.15), Vector3.new(side * 2.5, 4.6, 0.15), gold)
-			ball(m, "WingPupil", Vector3.new(0.75, 1, 0.16), Vector3.new(side * 2.5, 4.6, 0.25), iron)
-			rod(m, "Antenna", Vector3.new(side * 0.3, 5.1, 0), Vector3.new(side * 1.2, 6.6, 0), 0.16, iron)
-			ball(m, "AntennaTip", Vector3.new(0.4, 0.5, 0.4), Vector3.new(side * 1.2, 6.6, 0), gold)
+			for _, z in {-1.3, 1.2} do part(m, "CrystalPaw", Vector3.new(0.9, 1.4, 1.3), Vector3.new(side, 0.75, z), cream) end
+			wedge(m, "FoxEar", Vector3.new(0.8, 1.8, 1.3), CFrame.new(side * 1.05, 5.7, 0.9) * CFrame.Angles(0, side * math.pi / 2, 0), blue)
+			crystal(m, Vector3.new(side * 1.4, 2.8, -0.6), 0.65, blue:Lerp(cream, 0.3))
 		end
-		ball(m, "FurryBody", Vector3.new(1.7, 4.2, 1.8), Vector3.new(0, 3.1, 0.4), Theme.Panel)
-		eyes(m, Vector3.new(0, 4.5, 1.25), 0.36)
-	elseif id == "MoonCat" then
-		ball(m, "CatBody", Vector3.new(3.5, 3.9, 2.8), Vector3.new(0, 2.5, 0), Theme.Ghost)
-		ball(m, "CatHead", Vector3.new(3.8, 3.1, 2.9), Vector3.new(0, 5.1, 0.2), Theme.Ghost)
+		eyes(m, Vector3.new(0, 4.35, 2.25), 0.65)
+		ball(m, "FoxMuzzle", Vector3.new(1.8, 1, 1.2), Vector3.new(0, 3.65, 2.25), cream)
+		ball(m, "FoxNose", Vector3.new(0.5, 0.35, 0.3), Vector3.new(0, 3.9, 2.8), ink)
+		local tail = part(m, "PrismTail", Vector3.new(1.7, 1.7, 3.7), Vector3.new(1.3, 2.8, -2.7), blue)
+		tail.CFrame *= CFrame.Angles(-0.5, -0.35, 0.25)
+		crystal(m, Vector3.new(2, 3.7, -3.8), 0.75, cream)
+	elseif id == "AtlasGolem" then
+		part(m, "AtlasTorso", Vector3.new(3.5, 3.4, 2.4), Vector3.new(0, 3.5, 0), stone, Enum.Material.Slate)
+		part(m, "AtlasHead", Vector3.new(2.9, 2.2, 2.2), Vector3.new(0, 6.2, 0), stone, Enum.Material.Slate)
+		part(m, "FacePlate", Vector3.new(2.3, 1.4, 0.2), Vector3.new(0, 6.1, 1.2), cream)
+		eyes(m, Vector3.new(0, 6.25, 1.35), 0.55)
 		for _, side in {-1, 1} do
-			local ear = Instance.new("WedgePart")
-			ear.Name = "PointedEar"; ear.Size = Vector3.new(1.1, 1.6, 1.5)
-			ear.CFrame = CFrame.new(side * 1.25, 6.6, 0) * CFrame.Angles(0, side * math.pi / 2, 0)
-			ear.Color = Theme.Ghost; ear.Material = Enum.Material.SmoothPlastic
-			ear.Anchored = true; ear.CanCollide = false; ear.Parent = m
-			ball(m, "InnerEar", Vector3.new(0.45, 0.75, 0.13), Vector3.new(side * 1.4, 6.65, 0.57), plum)
-			ball(m, "Paw", Vector3.new(1.3, 0.8, 1.6), Vector3.new(side * 1, 0.5, 0.6), cream)
+			ball(m, "ShoulderJoint", Vector3.new(1.2, 1.2, 1.2), Vector3.new(side * 2.2, 4.5, 0), brass)
+			local arm = part(m, "AtlasArm", Vector3.new(1.5, 2.9, 1.6), Vector3.new(side * 2.6, 3.3, 0.2), stone, Enum.Material.Slate)
+			arm.CFrame *= CFrame.Angles(0, 0, side * 0.15)
+			part(m, "AtlasLeg", Vector3.new(1.3, 1.5, 1.5), Vector3.new(side * 1, 1.2, 0), ink, Enum.Material.Slate)
+			part(m, "AtlasFoot", Vector3.new(1.6, 0.6, 2.2), Vector3.new(side * 1, 0.35, 0.4), stone, Enum.Material.Slate)
 		end
-		eyes(m, Vector3.new(0, 5.3, 1.6), 0.75, gold)
-		ball(m, "Nose", Vector3.new(0.4, 0.3, 0.15), Vector3.new(0, 4.7, 1.68), Theme.Barn)
-		for i = 1, 16 do
-			local a = math.rad(-100 + (i - 1) * 260 / 16)
-			local b = math.rad(-100 + i * 260 / 16)
-			rod(m, "CrescentTail", Vector3.new(2.7 + math.cos(a) * 1.9, 3 + math.sin(a) * 1.9, -0.6), Vector3.new(2.7 + math.cos(b) * 1.9, 3 + math.sin(b) * 1.9, -0.6), 0.5, gold)
-		end
-		ball(m, "MoonMark", Vector3.new(0.5, 0.65, 0.12), Vector3.new(0, 5.9, 1.55), gold)
-	elseif id == "PumpkinKing" then
-		ball(m, "RoyalCoat", Vector3.new(3.4, 3.6, 2.5), Vector3.new(0, 2.5, 0), plum)
-		ball(m, "PumpkinHead", Vector3.new(4.4, 3.8, 3.5), Vector3.new(0, 5.6, 0), Theme.Pumpkin)
+		disc(m, "CompassRim", 1.15, 0.2, Vector3.new(0, 3.6, 1.3), brass, true)
+		disc(m, "CompassFace", 0.9, 0.21, Vector3.new(0, 3.6, 1.45), cream, true)
+		wedge(m, "CompassNeedle", Vector3.new(0.2, 1.4, 0.55), CFrame.new(0, 3.7, 1.65) * CFrame.Angles(0, math.pi / 2, -0.3), blue)
+	elseif id == "StarRay" then
+		ball(m, "RayBody", Vector3.new(3.1, 1.9, 4.8), Vector3.new(0, 2.6, 0), blue:Lerp(ink, 0.2))
 		for _, side in {-1, 1} do
-			ball(m, "PumpkinLobe", Vector3.new(2.4, 3.7, 3.4), Vector3.new(side * 1.2, 5.6, 0), Theme.Pumpkin)
-			ball(m, "RoyalBoot", Vector3.new(1.3, 0.8, 1.8), Vector3.new(side * 0.9, 0.5, 0.6), iron)
-			ball(m, "RoyalGlove", Vector3.new(1, 1.1, 1), Vector3.new(side * 2.2, 3.6, 0), cream)
+			-- Rotate the triangular cross-section into the horizontal plane:
+			-- a ray's swept wing, not a thick rectangular arm facing the camera.
+			wedge(m, "RayWing", Vector3.new(0.35, 5.2, 4.5), CFrame.new(side * 2.4, 2.55, -0.3) * CFrame.Angles(0, side * 0.16, 0) * CFrame.Angles(0, 0, -side * math.pi / 2), blue)
+			ball(m, "WingRoot", Vector3.new(2, 0.45, 3.5), Vector3.new(side * 1.5, 2.65, -0.1), blue)
 		end
-		eyes(m, Vector3.new(0, 5.9, 1.77), 0.85, cream)
-		part(m, "CarvedSmile", Vector3.new(1.8, 0.3, 0.12), Vector3.new(0, 4.9, 1.78), iron)
-		ring(m, "CrownBand", Vector3.new(0, 7.3, 0), 1.45, 0.35, gold)
-		for i = 1, 5 do
-			local a = i * math.pi * 2 / 5
-			rod(m, "CrownPoint", Vector3.new(math.cos(a) * 1.45, 7.3, math.sin(a) * 1.45), Vector3.new(math.cos(a) * 1.45, 8.4, math.sin(a) * 1.45), 0.32, gold)
+		eyes(m, Vector3.new(0, 2.8, 2.3), 0.65)
+		rod(m, "RayTail", Vector3.new(0, 2.6, -2), Vector3.new(0, 2, -5), 0.3, blue)
+		rod(m, "RayTailTip", Vector3.new(0, 2, -5), Vector3.new(0.8, 3, -6), 0.23, brass)
+		local points = {Vector3.new(-1, 3.5, 0.2), Vector3.new(0.3, 3.55, -0.7), Vector3.new(1, 3.3, 0.8)}
+		for i, p in points do
+			ball(m, "StarSpot", Vector3.new(0.3, 0.15, 0.3), p, brass)
+			if i > 1 then rod(m, "ConstellationLine", points[i - 1], p, 0.07, cream) end
 		end
-		rod(m, "RoyalStaff", Vector3.new(2.8, 0.3, 0), Vector3.new(2.8, 6, 0), 0.25, gold)
-		ball(m, "StaffPearl", Vector3.new(0.8, 0.9, 0.8), Vector3.new(2.8, 6.3, 0), cream)
+	elseif id == "CloudWhale" then
+		ball(m, "WhaleBody", Vector3.new(5.8, 3.9, 5.1), Vector3.new(0, 3.1, 0), blue:Lerp(cream, 0.35))
+		ball(m, "WhaleBelly", Vector3.new(5.5, 1.6, 4.9), Vector3.new(0, 2.1, 0.1), cream)
+		for _, side in {-1, 1} do
+			local fin = ball(m, "WhaleFin", Vector3.new(2.5, 0.6, 2.1), Vector3.new(side * 3.2, 2.6, 0), blue)
+			fin.CFrame *= CFrame.Angles(0, 0, side * 0.3)
+			local tail = ball(m, "WhaleFluke", Vector3.new(2.8, 0.65, 1.6), Vector3.new(side * 1.1, 3.5, -3.6), blue)
+			tail.CFrame *= CFrame.Angles(0, side * 0.4, 0)
+		end
+		ball(m, "WhaleTail", Vector3.new(2.3, 1.7, 2.6), Vector3.new(0, 3.1, -2.8), blue)
+		eyes(m, Vector3.new(0, 3.4, 2.45), 1)
+		part(m, "WhaleSmile", Vector3.new(1.2, 0.13, 0.1), Vector3.new(0, 2.65, 2.55), ink)
+		for _, offset in {Vector3.new(0, 5.4, 0), Vector3.new(-0.55, 6.1, 0), Vector3.new(0.55, 6.2, 0)} do ball(m, "CloudSpout", Vector3.new(1.2, 1, 1.1), offset, cream) end
+		ring(m, "NavigatorBand", Vector3.new(0, 3.1, 0), 2.7, 0.18, brass, CFrame.Angles(math.pi / 2, 0, 0))
 	else
 		error("Unknown character: " .. id)
 	end

@@ -1,5 +1,50 @@
 # Collector courtyard validation
 
+## 2026-10-18: permanent loot and overlapping labels
+
+Live Studio checks with the event setting left empty:
+
+- Default catalogue has exactly 4 permanent finds and 8 permanent companions.
+  Every normal drop belongs to the permanent collection.
+- `LootCatalog.Build("Halloween")` adds the archived collection (8 finds / 16
+  companions total); a subsequent empty-event build returns only 4 / 8 again.
+  Unknown event identifiers are rejected. This did not enable the live event.
+- All permanent models construct with anchored, non-colliding, non-Neon parts.
+  All archived models also still construct through the event-art route.
+- Approaching an empty stand hides its plaque while the native action prompt is
+  visible. Stepping away restores the plaque. Screenshots confirm a single text
+  surface instead of the previously stacked labels.
+- Opening the catalogue disables world prompts and hides plaques; closing it
+  restores prompt behaviour. The unpacking countdown remains visible while its
+  action is disabled; ready finds switch back to one action prompt.
+- With the normal 40-coin start, TravelCase charged 15, unpacked for 8 seconds,
+  revealed Scrapling, awarded 10 XP and paid its configured passive income.
+  The character reveal also suppressed world prompts/plaques.
+- The new catalogue and collection caption fit a 375 × 400 safe area, including
+  wrapped names, odds, subtitle and placement controls >=44px.
+- A temporary 4 × 2 art-review grid was used to inspect all eight companions;
+  it is a Play-only fixture, not shipped UI.
+- All four permanent rarities completed their real unpack/open cycle. Drop IDs
+  matched each find's pool, combined income matched resident totals, and sale
+  freed a stand and rejected repeat sale.
+- With sufficient test coins and an unlocked empty stand, all four disabled
+  Halloween find IDs were explicitly rejected by the server's active catalogue.
+- Landscape catalogue text and controls fit an 801 × 413 safe area. The automated
+  proximity activation was retried after waiting for the shown prompt following
+  a test teleport; the menu and layout checks then passed.
+- A clean restart validated the final model constructors and menu controller
+  with the normal 40-coin balance. Opening a catalogue hides the Roblox player
+  list as well as world prompts; closing it restores the prior player-list state
+  and the nearby-prompt/distant-plaque behaviour.
+
+Output markers: `PERMANENT_CATALOG_MODELS_PASS`, `LABEL_PROMPT_EXCLUSIVE_PASS`,
+`PERMANENT_UI_375PX_PASS`, `PERMANENT_LOOP_MODAL_LABEL_PASS`,
+`EVENT_ARCHIVE_RENDER_PASS`, `PERMANENT_TIERS_INCOME_SELL_PASS`,
+`DISABLED_EVENT_SERVER_GATE_PASS`, `PERMANENT_LANDSCAPE_PASS`,
+`PERMANENT_CLEAN_RESTART_UI_PASS`.
+
+## 2026-10-17: original collector checkpoint (historical)
+
 Validated in a Roblox Studio Play session with Rojo connected. These are live
 smoke checks, not an offline Luau typecheck or a multiplayer load test.
 
