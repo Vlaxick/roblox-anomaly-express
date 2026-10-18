@@ -4,7 +4,10 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local Config = require(ReplicatedStorage.Shared.Config.CityConfig)
+local Obby = require(ReplicatedStorage.Shared.Config.ObbyConfig)
+local Course = require(script.Parent.ObbyCourse)
 local Assets = require(ReplicatedStorage.Shared.FarmAssets)
 local Theme = require(ReplicatedStorage.Shared.Config.Theme)
 local LevelService = require(script.Parent.LevelService)
@@ -13,7 +16,7 @@ local CityService = {}
 type Session = {
 	Id: string, Progress: number, Started: number, Deadline: number,
 	StudyUntil: number, Phase: string, Pattern: {number}, Pressed: {[number]: boolean},
-	Checkpoint: number, LastTouch: number, LastFall: number,
+	Checkpoint: number, LastTouch: number, LastFall: number, Falls: number,
 }
 local sessions: {[Player]: Session} = {}
 local rewardTimes: {[Player]: {[string]: number}} = {}
@@ -52,9 +55,13 @@ local function send(player: Player, session: Session, message: string?)
 	local definition = Config.Activities[session.Id]
 	local now = Workspace:GetServerTimeNow()
 	local last = rewardTimes[player] and rewardTimes[player][session.Id]
+	local section = session.Id == "Obby" and Obby.Nodes[math.min(session.Progress + 1, #Obby.Nodes)].Section or nil
 	state:FireClient(player, {
 		Active = true, Id = session.Id, Name = definition.Name,
-		Progress = session.Progress, Total = session.Id == "Obby" and 12 or (session.Id == "Circuit" and 6 or 4),
+		Progress = session.Progress, Total = session.Id == "Obby" and #Obby.Nodes or (session.Id == "Circuit" and 6 or 4),
+		Section = section, SectionName = section and Obby.Sections[section].Name or nil,
+		Hint = section and Obby.Sections[section].Hint or nil, Falls = session.Falls,
+		CheckpointSection = session.Id == "Obby" and Obby.Nodes[session.Checkpoint].Section or nil,
 		Started = session.Started, Deadline = session.Deadline,
 		Phase = session.Phase, StudyUntil = session.StudyUntil,
 		Pattern = session.Phase == "Study" and session.Pattern or nil,
@@ -113,11 +120,11 @@ local function start(player: Player, id: string)
 		Id = id, Progress = id == "Obby" and 1 or 0, Started = now,
 		Deadline = id == "Circuit" and now + 30 or (id == "Memory" and now + 50 or 0),
 		StudyUntil = id == "Memory" and now + 5 or 0, Phase = id == "Memory" and "Study" or "Play",
-		Pattern = pattern, Pressed = {}, Checkpoint = 1, LastTouch = 0, LastFall = 0,
+		Pattern = pattern, Pressed = {}, Checkpoint = 1, LastTouch = 0, LastFall = 0, Falls = 0,
 	}
 	sessions[player] = session
 	player:SetAttribute("CityActivity", id)
-	if id == "Obby" then teleport(player, Config.ObbyPlatforms[1] + Vector3.new(0, 4, 0))
+	if id == "Obby" then teleport(player, Course.Spawn(1))
 	elseif id == "Circuit" then teleport(player, Config.CircuitCenter + Vector3.new(0, 4, 31))
 	else teleport(player, Config.MemoryCenter + Vector3.new(0, 4, 31)) end
 	send(player, session)
@@ -248,33 +255,9 @@ local function buildActivities(root: Folder)
 	for i = 1, 8 do
 		pressurePad(memory, "Memory", i, Config.MemoryCenter + Vector3.new(-27 + ((i - 1) % 4) * 18, 1.6, i <= 4 and -16 or 8))
 	end
-	local obby = Instance.new("Model"); obby.Name = "Obby"; obby.Parent = root
-	part(obby, "ObbyCourtyard", Vector3.new(130, 1, 210), Vector3.new(-285, 0.7, -191), Theme.Path, true)
-	for _, side in {-1, 1} do
-		part(obby, "ObbyBoundary", Vector3.new(1.5, 5, 210), Vector3.new(-285 + side * 65, 3, -191), steel, true)
-	end
-	sign(obby, Vector3.new(-285, 15, -96), 80, 9, "SKYLINE OBBY", "12 STAGES  /  CHECKPOINTS AT 5 AND 9  /  FALLS ARE SAFE")
-	local startPad = part(obby, "StartPad", Vector3.new(16, 0.3, 10), Vector3.new(-285, 1.4, -105), green, true)
-	numberOn(startPad, "START")
+	local obby, startPad = Course.Build(root)
 	bindTouch(startPad, function(player) start(player, "Obby") end)
-	for i, at in Config.ObbyPlatforms do
-		local checkpoint = i == 1 or i == 5 or i == 9 or i == 12
-		local platform = part(obby, "Stage_" .. i, Vector3.new(checkpoint and 14 or 10, 1.2, checkpoint and 14 or 10), at, checkpoint and green or blue, true)
-		platform:SetAttribute("StageIndex", i); numberOn(platform, tostring(i))
-		part(obby, "PlatformSupport", Vector3.new(1.3, at.Y, 1.3), Vector3.new(at.X, at.Y / 2, at.Z), steel, false)
-		bindTouch(platform, function(player)
-			local session = sessions[player]
-			if not session or session.Id ~= "Obby" or i ~= session.Progress + 1 then return end
-			local now = Workspace:GetServerTimeNow()
-			if now - session.LastTouch < 0.4 then return end
-			session.LastTouch = now
-			if i == 12 and now - session.Started < Config.Activities.Obby.MinimumSeconds then send(player, session, "Follow the complete course before finishing."); return end
-			session.Progress = i
-			if i == 5 or i == 9 then session.Checkpoint = i end
-			if i == 12 then complete(player, session) else send(player, session, checkpoint and "Checkpoint saved!" or nil) end
-		end)
-	end
-	returnPrompt(obby, Config.ObbyPlatforms[12] + Vector3.new(0, 1, -8))
+	returnPrompt(obby, Course.Spawn(#Obby.Nodes) + Vector3.new(0, 0, -12))
 end
 function CityService.Init()
 	local old = Workspace:FindFirstChild("StationActivities"); if old then old:Destroy() end
@@ -308,6 +291,34 @@ function CityService.Init()
 	Players.PlayerAdded:Connect(joined)
 	for _, player in Players:GetPlayers() do joined(player) end
 	Players.PlayerRemoving:Connect(function(player) sessions[player] = nil; rewardTimes[player] = nil; travelTimes[player] = nil end)
+
+	local accumulated = 0
+	RunService.Heartbeat:Connect(function(dt)
+		accumulated += dt
+		if accumulated < 0.05 then return end
+		accumulated = 0
+		local now = Workspace:GetServerTimeNow()
+		Course.Update(now)
+		for player, session in sessions do
+			if session.Id ~= "Obby" then continue end
+			local rootPart = rootOf(player)
+			if not rootPart then continue end
+			local fell = rootPart.Position.Y < math.max(5, Obby.Nodes[session.Progress].At.Y - 7)
+			if now - session.LastFall > 0.9 and (fell or Course.HitHazard(rootPart)) then
+				session.LastFall = now; session.Falls += 1; session.Progress = session.Checkpoint
+				teleport(player, Course.Spawn(session.Checkpoint))
+				send(player, session, fell and "Missed the jump. Back to your checkpoint." or "Machinery hit! Back to your checkpoint.")
+				continue
+			end
+			local index = Course.Surface(rootPart)
+			if index ~= session.Progress + 1 then continue end
+			if index == #Obby.Nodes and now - session.Started < Config.Activities.Obby.MinimumSeconds then continue end
+			session.Progress = index
+			if Obby.Checkpoints[index] then session.Checkpoint = index end
+			if index == #Obby.Nodes then complete(player, session)
+			else send(player, session, Obby.Checkpoints[index] and "Checkpoint saved!" or nil) end
+		end
+	end)
 	task.spawn(function()
 		while true do
 			task.wait(0.25)
@@ -328,15 +339,11 @@ function CityService.Init()
 				local rootPart = rootOf(player)
 				if not rootPart then cancel(player); continue end
 				local at = rootPart.Position
-				local center = session.Id == "Obby" and Vector3.new(-285, 0, -191) or (session.Id == "Circuit" and Config.CircuitCenter or Config.MemoryCenter)
-				local size = session.Id == "Obby" and Vector3.new(75, 100, 120) or Vector3.new(50, 60, 50)
+				local center = session.Id == "Obby" and Obby.Origin or (session.Id == "Circuit" and Config.CircuitCenter or Config.MemoryCenter)
+				local size = session.Id == "Obby" and Obby.Bounds or Vector3.new(50, 60, 50)
 				local relative = at - center
 				if math.abs(relative.X) > size.X or math.abs(relative.Z) > size.Z or at.Y > size.Y then cancel(player, "Activity left. Use a gate to start again."); continue end
-				if session.Id == "Obby" and at.Y < 5 and now - session.LastFall > 1 then
-					session.LastFall = now; session.Progress = session.Checkpoint
-					teleport(player, Config.ObbyPlatforms[session.Checkpoint] + Vector3.new(0, 4, 0))
-					send(player, session, "Back to your checkpoint. Try the jump again!")
-				elseif session.Deadline > 0 and now >= session.Deadline then
+				if session.Deadline > 0 and now >= session.Deadline then
 					cancel(player, "Time is up. Step on START to try again.")
 				elseif session.Id == "Memory" and session.Phase == "Study" and now >= session.StudyUntil then
 					session.Phase = "Play"; send(player, session, "Now repeat the pattern!")

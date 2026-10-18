@@ -1,5 +1,63 @@
 # Collector courtyard validation
 
+## 2026-10-18: Depot Trial replacement
+
+The original twelve-square obby below is historical, replaced by six authored
+obstacle sections and twenty-eight route surfaces in an enclosed depot.
+
+Live Studio checks:
+
+- Gate 01 starts the new course. All 28 surfaces, the full depot shell and the
+  personal next-surface marker construct without game-script runtime errors.
+- A client-owned rider remained on a travelling cargo deck for three seconds;
+  measured horizontal drift relative to the deck was under 0.01 studs.
+- The section HUD, instruction and two-line checkpoint/reward footer fit a
+  375 × 400 GUI safe area. This is not a real-device touch test.
+- Teleporting to the final balcony before the intermediate surfaces did not
+  complete the activity or grant coins. Falling to the service floor reset the
+  first checkpoint.
+- Controlled server landing fixtures advanced the real private session through
+  every surface. A deliberate rotor hit restored section 3, and a deliberate fall
+  restored section 5. Completing the remaining ordered surfaces paid exactly
+  25 coins and 12 XP, and recorded the elapsed best time.
+- The fading-stair fixture initially waited on a temporary plate and correctly
+  fell when it disappeared. Repeating the four plates in one continuous solid
+  window passed; this is the intended timing challenge, not a safe waiting area.
+- Rotor testing caught loss of angular precision from epoch-sized CFrame angles.
+  Both client and server now reduce time to a single revolution before creating
+  the rotation; the repeated checkpoint/landing checks passed afterwards.
+- A separate gap-by-gap fixture used server-owned Humanoid movement/jumps at
+  WalkSpeed 16, without awarding route progress. Every static transition landed
+  on its intended surface, including the narrow corners and rising roof beams.
+  The two exits from moving decks failed when taken in an arbitrary phase;
+  after approaching the correct phase, both timed edge jumps passed. Cargo decks
+  were widened to 10 studs to make that timing less brittle.
+- `MoveTo` is unsuitable for a carrying-platform walking fixture because direct
+  CFrame carry ends an AI MoveTo goal. A client fixture using ordinary per-frame
+  Humanoid movement instead walked 3.1 studs relative to the deck and reached a
+  jump peak 10.83 studs above its surface centre. Carry now explicitly excludes
+  Jumping/Freefall so it cannot interrupt takeoff.
+- A native rotor sample rotated smoothly by 0.10 radians over roughly 0.15 s,
+  confirming the epoch-angle precision fix in the running game.
+- A clean final restart built the widened decks and takeoff guard. A component
+  fixture checked all six actual hint strings, progress and reward text in both
+  375 × 400 and 801 × 413 safe areas. Gate 01 then started normally with 40 coins;
+  the outlined next landing and full depot interior were visually inspected.
+
+Markers: `DEPOT_GATE_CONSTRUCTION_PASS`, `DEPOT_CLIENT_DECK_CARRY_PASS`,
+`DEPOT_NARROW_HUD_PASS`, `DEPOT_SKIP_FINISH_REJECTED`,
+`DEPOT_FIRST_FALL_RESET_PASS`, `DEPOT_FRESH_MARKER_PASS`,
+`DEPOT_ROTOR_CHECKPOINT_3_PASS`, `DEPOT_FALL_CHECKPOINT_5_PASS`,
+`DEPOT_ORDERED_ROUTE_REWARD_PASS`, `DEPOT_GAP_PHYSICS`,
+`DEPOT_TIMED_CARGO_JUMP_PASS`, `DEPOT_CLIENT_WALK_JUMP_PASS`,
+`DEPOT_ROTOR_PRECISION_PASS`, `DEPOT_ALL_SECTION_LAYOUTS_PASS`,
+`DEPOT_FINAL_FRESH_GATE_PASS`.
+
+The ordered landing fixtures verify rules, not an unaided full-course playthrough.
+Before release, run multiplayer contention checks on shared moving/fading parts,
+test real touch/gamepad controls and tune difficulty with new players. Play-only
+fixtures and temporary physics ownership changes are discarded when Play stops.
+
 ## 2026-10-18: English UI, Central Station and lobby activities
 
 Live single-client Studio checks with Rojo connected:

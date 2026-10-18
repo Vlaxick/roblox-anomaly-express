@@ -136,8 +136,8 @@ local function update()
 	title.Text = data.Name
 	local seconds = data.Deadline > 0 and math.max(0, math.ceil(data.Deadline - now)) or math.floor(now - data.Started)
 	if data.Id == "Obby" then
-		instruction.Text = data.Message or "Jump through all stages. Green platforms save your checkpoint."
-		progress.Text = "Stage " .. data.Progress .. " / " .. data.Total .. "  ·  " .. seconds .. " s"
+		instruction.Text = data.Message or (data.SectionName .. ": " .. data.Hint)
+		progress.Text = "Section " .. data.Section .. " / 6  ·  " .. seconds .. " s"
 	elseif data.Id == "Circuit" then
 		instruction.Text = data.Message or "Step on each numbered button. You have 30 seconds."
 		progress.Text = data.Progress .. " / " .. data.Total .. " buttons  ·  " .. seconds .. " s"
@@ -152,6 +152,9 @@ local function update()
 	end
 	local rewardIn = math.max(0, math.ceil((data.RewardReadyAt or 0) - now))
 	footer.Text = rewardIn > 0 and ("Practice round · reward cooldown: " .. rewardIn .. " s") or ("Clear reward: " .. data.Coins .. " coins + " .. data.XP .. " XP")
+	if data.Id == "Obby" then
+		footer.Text = "Checkpoint: " .. data.CheckpointSection .. "  ·  Falls: " .. data.Falls .. "\n" .. footer.Text
+	end
 end
 screen:GetPropertyChangedSignal("AbsoluteSize"):Connect(update)
 task.spawn(function() while gui.Parent do update(); task.wait(0.1) end end)

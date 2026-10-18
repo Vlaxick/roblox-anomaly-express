@@ -14,7 +14,7 @@ At the back of the main hall, approach a gate control and use **Enter**:
 
 | Gate | Destination | Play | Reward |
 | --- | --- | --- | --- |
-| 01 | Skyline Obby | 12 stages, checkpoints at 5 and 9, safe fall resets | 25 coins + 12 XP |
+| 01 | Depot Trial | Six obstacle sections inside a maintenance hall; checkpoints at sections 3 and 5 | 25 coins + 12 XP |
 | 02 | Circuit Run | Walk over all six floor buttons within 30 seconds | 15 coins + 8 XP |
 | 03 | Memory Room | Study four numbers for 5 seconds, then step on them in order | 20 coins + 10 XP |
 | 04 | Platform 1 | Explore the train platform | No reward / train service not active yet |
@@ -34,6 +34,34 @@ the lower screen clear for movement controls.
 The departure board explicitly marks expedition service as in development. There
 is no fake departure countdown: these are working lobby activities, not a claim
 that train extraction/saving is implemented. Shops are town scenery at this stage.
+
+### Depot Trial
+
+Gate 01 enters a 180 × 250-stud, 85-stud-high brick maintenance depot. Skylights,
+roof trusses, an overhead crane, service cabinets and a glazed flywheel frame a
+winding route that climbs from the entrance to the finish balcony.
+
+The course borrows the **varied-section tower-obstacle format**, not assets or a
+map, from [Tower of Hell](https://www.roblox.com/games/1962086868/Tower-of-Hell).
+It is an authored route, not a random tower and not a no-checkpoint copy:
+
+1. **Rail balance** — narrow L-shaped rails and broken corners.
+2. **Pressure alley** — three timed steam valves; amber warns before a red burst.
+3. **Cargo lifts** — two travelling decks that carry standing/walking riders.
+4. **Rotor room** — three rotating striped arms to jump over.
+5. **Fading stairs** — rising plates turn amber before becoming non-solid.
+6. **Roof run** — narrow rafters, red jump hurdles and the finish bell.
+
+Twenty-eight ordered route surfaces validate landings, not merely contact with
+the final platform. Falls and machinery hits restore the saved checkpoint at the
+entrance or sections 3 / 5; the elapsed timer keeps running. A personal `NEXT`
+marker identifies the next surface (`WAIT` for unsafe fading plates). The HUD
+shows the current section, advice, checkpoint, falls and reward cooldown. The
+25-coin / 12-XP reward and 90-second cooldown are unchanged.
+
+Motion uses shared server-time functions. Clients smooth the visible machinery
+and carry their local rider; the server owns hit checks, sequence, checkpoints
+and rewards. This is not a complete anti-cheat or a multiplayer load-test claim.
 
 ## Development workflow
 

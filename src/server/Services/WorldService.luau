@@ -112,7 +112,7 @@ local function station(root: Instance)
 	sign(model, "ConcourseDirectory", Vector3.new(0, 10, -183), 70, 8, "PLAY BEFORE YOUR JOURNEY", "01 OBBY  /  02 CIRCUIT  /  03 MEMORY  /  04 PLATFORM", steel)
 	for _, x in {-8, 8} do part(model, "DirectoryPost", Vector3.new(0.8, 9, 0.8), Vector3.new(x, 5, -183), steel, Enum.Material.Metal) end
 	local gates = Instance.new("Folder"); gates.Name = "Gates"; gates.Parent = model
-	local names = {"SKYLINE OBBY", "CIRCUIT RUN", "MEMORY ROOM", "PLATFORM 1"}
+	local names = {"DEPOT TRIAL", "CIRCUIT RUN", "MEMORY ROOM", "PLATFORM 1"}
 	local ids = {"Obby", "Circuit", "Memory", "Platform"}
 	for i = 1, 4 do
 		local x = -108 + (i - 1) * 72

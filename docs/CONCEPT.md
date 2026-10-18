@@ -23,8 +23,14 @@ town without pretending that every shop is a working economy system.
 
 Three working activities make the waiting area playable:
 
-- **Skyline Obby:** sequential elevated platforms with saved checkpoints and safe
-  fall resets. The finish rewards completing the whole route, not touching a trophy.
+- **Depot Trial:** a six-section maintenance-hall course: narrow rails, timed
+  steam, travelling cargo decks, rotating arms, fading stairs and roof rafters.
+  Two intermediate checkpoints preserve progress at sections 3 and 5. Twenty-eight
+  ordered landing surfaces prevent skipping straight to the balcony. A personal
+  next-surface marker and section-specific advice explain the route. The room is
+  an 85-stud-high brick depot with skylights, gantry crane and guarded flywheel;
+  its geometry is original, using Tower of Hell's varied-section format as a
+  reference rather than copying a map or assets.
 - **Circuit Run:** six pressure buttons, one 30-second attempt, any order. Buttons
   give a brief physical press pulse; progress is tracked separately for each player.
 - **Memory Room:** a private four-number pattern shown for five seconds; the
